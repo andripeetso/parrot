@@ -6,7 +6,7 @@ import Foundation
 /// the binary stays self-contained — no `Bundle.module` lookup, no per-target
 /// resource bundle to ship alongside the executable.
 package enum ModelRegistry {
-    static let shared: [TranscriptionModel] = [
+    package static let shared: [TranscriptionModel] = [
         TranscriptionModel(
             id: "whisper-base.en",
             displayName: "Whisper Base (English)",

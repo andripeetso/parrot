@@ -10,7 +10,7 @@ package struct Transcript: Equatable, Sendable {
     /// transcriber's output.
     package var timings: TranscriberTimings?
 
-    init(text: String, timings: TranscriberTimings? = nil) {
+    package init(text: String, timings: TranscriberTimings? = nil) {
         self.text = text
         self.timings = timings
     }

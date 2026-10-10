@@ -3,9 +3,9 @@ import Foundation
 import WhisperKit
 
 package actor WhisperKitTranscriber: Transcriber {
-    let modelID: String
+    package let modelID: String
     private let model: TranscriptionModel
-    let tuning: WhisperTuning
+    package let tuning: WhisperTuning
     private var pipeline: WhisperKit?
     /// Set by `unload`: this transcriber was replaced and loads nothing more.
     private var retired = false
@@ -141,7 +141,7 @@ package actor WhisperKitTranscriber: Transcriber {
 
     /// The example sentence in `examples` for `language`, matched as the
     /// dictionary matches it.
-    static func example(in examples: [String: String], for language: String?) -> String? {
+    package static func example(in examples: [String: String], for language: String?) -> String? {
         examples.isEmpty ? nil : UserDictionary(examples: examples).example(for: language)
     }
 
@@ -149,7 +149,7 @@ package actor WhisperKitTranscriber: Transcriber {
     /// is what the pipeline spent outside preprocessing, the encoder and
     /// windowing; post-processing is the rest of the call. `ownPreprocessing` is
     /// time Parrot spent on the audio before handing it to WhisperKit.
-    static func timings(
+    package static func timings(
         from results: [TranscriptionTimings],
         audioSeconds: TimeInterval,
         preprocessing ownPreprocessing: TimeInterval,
@@ -181,7 +181,7 @@ package actor WhisperKitTranscriber: Transcriber {
     /// the text spoken just before the audio. Special tokens are dropped: the
     /// decoder builds its own control sequence around the prompt, and a stray
     /// one there desynchronizes it.
-    static func promptTokens(for prompt: String?, tokenizer: WhisperTokenizer?) -> [Int]? {
+    package static func promptTokens(for prompt: String?, tokenizer: WhisperTokenizer?) -> [Int]? {
         guard let tokenizer,
               let text = prompt?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty
         else { return nil }
@@ -194,7 +194,7 @@ package actor WhisperKitTranscriber: Transcriber {
     /// Strip Whisper's non-speech bracket tokens ([BLANK_AUDIO], [MUSIC],
     /// (silence), <|nospeech|>, etc.) and collapse whitespace. When the model
     /// hears silence it emits these literally; we don't want to paste them.
-    static func sanitize(_ text: String) -> String {
+    package static func sanitize(_ text: String) -> String {
         let patterns = [
             #"\[[^\]]*\]"#,        // [BLANK_AUDIO], [MUSIC], [Applause]
             #"\([^)]*\)"#,          // (silence), (music playing)
@@ -222,7 +222,7 @@ extension WhisperKitTranscriber {
 
     /// True if any registry model is still in the pre-0.0.6 ~/Documents cache.
     /// Reads ~/Documents, so foreground commands only.
-    static func hasLegacyModels() -> Bool {
+    package static func hasLegacyModels() -> Bool {
         ModelRegistry.shared.contains { m in
             guard let variant = m.whisperKitID else { return false }
             return FileManager.default.fileExists(atPath: Paths.legacyModels.appendingPathComponent(folders(for: variant)[0]).path)
@@ -233,7 +233,7 @@ extension WhisperKitTranscriber {
     /// to `Paths.appSupport`, so they aren't downloaded again. Only moves the
     /// registry's own folders; other apps share that directory. Reads
     /// ~/Documents, so call it from foreground commands only, never the daemon.
-    static func migrateLegacyModels() {
+    package static func migrateLegacyModels() {
         let fm = FileManager.default
         let old = Paths.legacyModels
         guard fm.fileExists(atPath: old.path) else { return }
@@ -333,7 +333,7 @@ extension WhisperKitTranscriber {
     }
 }
 
-enum TranscriberError: Error {
+package enum TranscriberError: Error {
     case missingEngineID
     case notLoaded
 }

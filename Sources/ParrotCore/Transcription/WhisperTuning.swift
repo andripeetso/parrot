@@ -37,7 +37,7 @@ package struct WhisperTuning: Equatable, @unchecked Sendable {
     /// The samples the model gets for a capture: trimmed if `trimSilence`,
     /// then padded with silence. An empty capture stays empty. Pure, so it is
     /// tested.
-    func prepare(_ audio: [Float]) -> [Float] {
+    package func prepare(_ audio: [Float]) -> [Float] {
         let trimmed = trimSilence ? SilenceTrimmer.trim(audio) : audio
         guard !trimmed.isEmpty, leadPadding > 0 || trailPadding > 0 else { return trimmed }
         let lead = Self.samples(leadPadding)
@@ -48,7 +48,7 @@ package struct WhisperTuning: Equatable, @unchecked Sendable {
     }
 
     /// `seconds` of 16 kHz audio as a sample count; negative counts as none.
-    static func samples(_ seconds: Double) -> Int {
+    package static func samples(_ seconds: Double) -> Int {
         max(0, Int((seconds * Double(WhisperKit.sampleRate)).rounded()))
     }
 
@@ -56,7 +56,7 @@ package struct WhisperTuning: Equatable, @unchecked Sendable {
     /// in, already chosen (see `SpokenLanguage`), or nil for a model that has
     /// only one. Detection never runs in the decode, and the task is always
     /// transcribe: no path falls into Whisper's translate-to-English (#43).
-    func decodingOptions(language: String?, promptTokens: [Int]?, audioSeconds: Double) -> DecodingOptions {
+    package func decodingOptions(language: String?, promptTokens: [Int]?, audioSeconds: Double) -> DecodingOptions {
         var options = DecodingOptions(task: .transcribe, language: language, detectLanguage: false)
         options.promptTokens = promptTokens
         options.withoutTimestamps = withoutTimestamps && Self.fitsOneWindow(audioSeconds)
@@ -66,7 +66,7 @@ package struct WhisperTuning: Equatable, @unchecked Sendable {
     /// True when `seconds` of audio decode in a single 30 s window. Past that,
     /// WhisperKit needs segment timestamps to pick where the next window
     /// starts; without them it cuts at exactly 30 s, through a word.
-    static func fitsOneWindow(_ seconds: Double) -> Bool {
+    package static func fitsOneWindow(_ seconds: Double) -> Bool {
         seconds <= Double(Constants.defaultWindowSamples) / Double(WhisperKit.sampleRate)
     }
 }

@@ -7,11 +7,11 @@ package final class CaptureBuffer: @unchecked Sendable {
     /// Counts and timings for one recording. Never audio.
     package struct Stats: Equatable {
         /// Tap callbacks that delivered converted audio.
-        var buffers = 0
+        package var buffers = 0
         /// Frames received at the input's own sample rate.
-        var inputFrames = 0
+        package var inputFrames = 0
         /// Buffers the converter failed on.
-        var conversionFailures = 0
+        package var conversionFailures = 0
         /// Seconds from `start()` to the first buffer, or nil if none arrived.
         package var firstBufferDelay: TimeInterval?
         /// Seconds from `start()` (the press) to the moment the first sample
@@ -22,7 +22,7 @@ package final class CaptureBuffer: @unchecked Sendable {
         /// deliver digital silence while they settle; that is lost too.
         package var firstSoundDelay: TimeInterval?
         /// Buffers the input failed to deliver (a render error).
-        var inputFailures = 0
+        package var inputFailures = 0
     }
 
     private let lock = NSLock()
@@ -35,7 +35,7 @@ package final class CaptureBuffer: @unchecked Sendable {
 
     /// Clears everything for a new recording that started at `startedAt`
     /// (`HostClock` nanoseconds).
-    func reset(startedAt: UInt64) {
+    package func reset(startedAt: UInt64) {
         lock.lock()
         defer { lock.unlock() }
         samples.removeAll(keepingCapacity: true)
@@ -47,7 +47,7 @@ package final class CaptureBuffer: @unchecked Sendable {
 
     /// True while a recording is open. A buffer arriving outside one is
     /// counted and must be dropped: it means the input ran between presses.
-    func admit() -> Bool {
+    package func admit() -> Bool {
         lock.lock()
         defer { lock.unlock() }
         if !isOpen { closedBuffers += 1 }
@@ -56,20 +56,20 @@ package final class CaptureBuffer: @unchecked Sendable {
 
     /// Buffers that arrived while no recording was open, over this buffer's
     /// lifetime. Zero unless an input ran between presses.
-    var buffersWhileClosed: Int {
+    package var buffersWhileClosed: Int {
         lock.lock()
         defer { lock.unlock() }
         return closedBuffers
     }
 
-    func recordInputFailure() {
+    package func recordInputFailure() {
         lock.lock()
         defer { lock.unlock() }
         stats.inputFailures += 1
     }
 
     /// Appends converted 16 kHz samples from one tap callback.
-    func append(_ chunk: UnsafeBufferPointer<Float>, inputFrames: Int, at now: UInt64) {
+    package func append(_ chunk: UnsafeBufferPointer<Float>, inputFrames: Int, at now: UInt64) {
         lock.lock()
         defer { lock.unlock() }
         if stats.firstBufferDelay == nil {
@@ -83,7 +83,7 @@ package final class CaptureBuffer: @unchecked Sendable {
     /// Records when the first frame of an input buffer was captured, and
     /// the first non-zero frame if it has one (host nanoseconds). Only the
     /// first of each counts.
-    func noteInput(firstFrameAt: UInt64, firstSoundAt: UInt64?) {
+    package func noteInput(firstFrameAt: UInt64, firstSoundAt: UInt64?) {
         lock.lock()
         defer { lock.unlock() }
         if stats.firstSampleDelay == nil {
@@ -96,7 +96,7 @@ package final class CaptureBuffer: @unchecked Sendable {
 
     /// True until a non-zero sample has been noted, so the audio thread
     /// scans for one only while it matters.
-    var awaitingSound: Bool {
+    package var awaitingSound: Bool {
         lock.lock()
         defer { lock.unlock() }
         return stats.firstSoundDelay == nil
@@ -104,13 +104,13 @@ package final class CaptureBuffer: @unchecked Sendable {
 
     /// Appends the converter's tail after the last callback. Not counted as
     /// a buffer.
-    func appendTail(_ chunk: UnsafeBufferPointer<Float>) {
+    package func appendTail(_ chunk: UnsafeBufferPointer<Float>) {
         lock.lock()
         defer { lock.unlock() }
         samples.append(contentsOf: chunk)
     }
 
-    func recordConversionFailure() {
+    package func recordConversionFailure() {
         lock.lock()
         defer { lock.unlock() }
         stats.conversionFailures += 1
@@ -118,13 +118,13 @@ package final class CaptureBuffer: @unchecked Sendable {
 
     /// Called from the configuration-change notification. Only sets a flag;
     /// the engine is torn down in `stop()`, never inside the notification.
-    func markRouteChanged() {
+    package func markRouteChanged() {
         lock.lock()
         defer { lock.unlock() }
         routeChanged = true
     }
 
-    var currentStats: Stats {
+    package var currentStats: Stats {
         lock.lock()
         defer { lock.unlock() }
         return stats
@@ -134,7 +134,7 @@ package final class CaptureBuffer: @unchecked Sendable {
     /// any point, the partial capture is discarded and this throws
     /// `CaptureError.routeChanged`, so it is never delivered as a success.
     /// Either way the buffer is empty afterwards.
-    func finish() throws -> [Float] {
+    package func finish() throws -> [Float] {
         lock.lock()
         let captured = samples
         let changed = routeChanged

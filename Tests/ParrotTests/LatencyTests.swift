@@ -1,5 +1,6 @@
 import WhisperKit
 import XCTest
+@testable import ParrotApp
 @testable import ParrotCore
 
 final class TranscriberTimingsTests: XCTestCase {

@@ -1,6 +1,7 @@
 import AppKit
 import ApplicationServices
 import XCTest
+@testable import ParrotApp
 @testable import ParrotCore
 
 final class DeliveryTests: XCTestCase {

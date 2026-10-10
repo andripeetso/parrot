@@ -19,33 +19,33 @@ import Foundation
 ///
 /// This is the only user-authored text Parrot stores. It never holds
 /// transcript text.
-struct UserDictionary: Codable, Equatable, Sendable {
-    struct Replacement: Codable, Equatable, Sendable {
+package struct UserDictionary: Codable, Equatable, Sendable {
+    package struct Replacement: Codable, Equatable, Sendable {
         /// What the model writes. Matched as whole words, ignoring case.
-        var from: [String]
+        package var from: [String]
         /// What to write instead, inserted exactly as given.
-        var to: String
+        package var to: String
     }
 
-    var terms: [String]
-    var replacements: [Replacement]
+    package var terms: [String]
+    package var replacements: [Replacement]
     /// One sentence per language code (`en`, `pt-BR`).
-    var examples: [String: String]
+    package var examples: [String: String]
 
-    init(terms: [String] = [], replacements: [Replacement] = [], examples: [String: String] = [:]) {
+    package init(terms: [String] = [], replacements: [Replacement] = [], examples: [String: String] = [:]) {
         self.terms = terms
         self.replacements = replacements
         self.examples = examples
     }
 
-    init(from decoder: Decoder) throws {
+    package init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         terms = try c.decodeIfPresent([String].self, forKey: .terms) ?? []
         replacements = try c.decodeIfPresent([Replacement].self, forKey: .replacements) ?? []
         examples = try c.decodeIfPresent([String: String].self, forKey: .examples) ?? [:]
     }
 
-    static let empty = UserDictionary()
+    package static let empty = UserDictionary()
 
     /// The example sentence for `language`, or nil when there is none.
     ///
@@ -53,7 +53,7 @@ struct UserDictionary: Codable, Equatable, Sendable {
     /// `pt-BR` and `pt` share a section. There is no fallback to another
     /// language: a prompt in the wrong language pulls the decoder into that
     /// language, which is worse than no prompt (#23).
-    func example(for language: String?) -> String? {
+    package func example(for language: String?) -> String? {
         guard let language, !language.isEmpty else { return nil }
         // Sorted so the choice among several matching sections is stable.
         let sections = examples
@@ -70,7 +70,7 @@ struct UserDictionary: Codable, Equatable, Sendable {
 
     /// Canonical spellings for engines that accept a vocabulary list, such as
     /// contextual strings: every term and every replacement target.
-    var vocabulary: [String] {
+    package var vocabulary: [String] {
         var seen = Set<String>()
         return (terms + replacements.map(\.to))
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -102,7 +102,7 @@ extension UserDictionary {
     ///   first separator is Replaces, a comma-separated list.
     /// - A comma in the word column means a missing separator, so the file is
     ///   refused rather than guessed at.
-    static func parse(_ data: Data) throws -> UserDictionary {
+    package static func parse(_ data: Data) throws -> UserDictionary {
         guard var text = String(data: data, encoding: .utf8) else { throw DictionaryParseError.notText }
         if text.hasPrefix("\u{FEFF}") { text.removeFirst() }
 
@@ -145,7 +145,7 @@ extension UserDictionary {
     }
 
     /// The comment lines at the top of every file Parrot writes.
-    static let preamble = """
+    package static let preamble = """
         # Words Parrot should spell your way. Replaces lists what it writes instead.
         # Separate the columns with two spaces or a tab.
 
@@ -161,7 +161,7 @@ extension UserDictionary {
     /// with a comma or starting with `#`, and a Replaces item with a comma.
     /// Runs of whitespace inside a word or an item become one space, which the
     /// replacement pass treats the same.
-    func text() -> (text: String, rows: Int, skipped: Int) {
+    package func text() -> (text: String, rows: Int, skipped: Int) {
         func clean(_ s: String) -> String { s.split(whereSeparator: \.isWhitespace).joined(separator: " ") }
 
         var order: [String] = []
@@ -200,11 +200,11 @@ extension UserDictionary {
 
 /// Why the dictionary file did not load. Descriptions give a line number and
 /// never quote the file.
-enum DictionaryParseError: Error, Equatable, CustomStringConvertible {
+package enum DictionaryParseError: Error, Equatable, CustomStringConvertible {
     case notText
     case missingSeparator(line: Int)
 
-    var description: String {
+    package var description: String {
         switch self {
         case .notText:
             return "not UTF-8 text"
@@ -221,7 +221,7 @@ extension UserDictionary {
     /// Parrot's own dependency name, so it changes nothing a new user is
     /// likely to say. It has no example sentence: those live in settings and
     /// add decoding time to every dictation, so they should be the user's own.
-    static let template = UserDictionary(
+    package static let template = UserDictionary(
         terms: ["WhisperKit"],
         replacements: [Replacement(from: ["whisper kit"], to: "WhisperKit")]
     ).text().text

@@ -1,5 +1,6 @@
 import AVFoundation
 import XCTest
+@testable import ParrotApp
 @testable import ParrotCore
 
 final class PermissionsTests: XCTestCase {

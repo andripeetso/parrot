@@ -11,7 +11,7 @@ package struct TranscriberTimings: Equatable, Sendable {
     package static let zero = TranscriberTimings()
 
     /// Seconds of audio handed to the model, after any trimming.
-    var audioSeconds: TimeInterval = 0
+    package var audioSeconds: TimeInterval = 0
     /// Silence trimming, padding the window, and the log-mel spectrogram.
     package var preprocessing: TimeInterval = 0
     /// Detecting the spoken language before decoding (Automatic, #43): its

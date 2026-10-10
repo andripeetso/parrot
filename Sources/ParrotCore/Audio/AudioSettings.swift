@@ -3,8 +3,8 @@
 /// The `settings.json` field for this feature; see `Settings`. Give each new
 /// field a default and decode it in `init(from:)` with
 /// `decodeIfPresent(…) ?? default`, so older files and `{}` still load.
-struct AudioSettings: Codable, Equatable {
-    init() {}
+package struct AudioSettings: Codable, Equatable {
+    package init() {}
 
-    init(from decoder: Decoder) throws {}
+    package init(from decoder: Decoder) throws {}
 }

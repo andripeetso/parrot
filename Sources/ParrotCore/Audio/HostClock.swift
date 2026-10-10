@@ -17,7 +17,7 @@ package enum HostClock {
 
     /// A Core Audio host time (`AudioTimeStamp.mHostTime`,
     /// `AVAudioTime.hostTime`) in host nanoseconds.
-    static func nanoseconds(fromHostTime hostTime: UInt64) -> UInt64 {
+    package static func nanoseconds(fromHostTime hostTime: UInt64) -> UInt64 {
         let info = timebase
         if info.numer == info.denom { return hostTime }
         return UInt64((Double(hostTime) * Double(info.numer) / Double(info.denom)).rounded())

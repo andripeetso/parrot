@@ -6,13 +6,13 @@ import Foundation
 /// hears it, so every example sentence goes along and the engine picks the one
 /// for the language it settled on.
 package struct DictionaryContext {
-    let store: DictionaryStore
+    package let store: DictionaryStore
     /// The language being spoken, when known. Without it the prompt is left
     /// to the engine, from `examples`.
-    let language: String?
+    package let language: String?
     /// The example sentences, by language code, from `settings.json`
     /// (`dictionary.examples`).
-    let examples: [String: String]
+    package let examples: [String: String]
 
     package init(store: DictionaryStore, language: String?, examples: [String: String] = [:]) {
         self.store = store
@@ -36,11 +36,25 @@ package struct DictionaryContext {
         savedExamples(in: Paths.settingsFile)
     }
 
-    static func savedExamples(in file: URL) -> [String: String] {
+    package static func savedExamples(in file: URL) -> [String: String] {
         guard let data = try? Data(contentsOf: file),
-              let settings = try? JSONDecoder().decode(Settings.self, from: data)
+              let settings = try? JSONDecoder().decode(DictionaryOnly.self, from: data)
         else { return [:] }
         return settings.dictionary.examples
+    }
+
+    /// The one key of `settings.json` the engine reads, so it decodes no
+    /// other feature's settings. A missing key is the default, as in the
+    /// full settings value.
+    private struct DictionaryOnly: Decodable {
+        package var dictionary = DictionarySettings()
+
+        package init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            dictionary = try c.decodeIfPresent(DictionarySettings.self, forKey: .dictionary) ?? DictionarySettings()
+        }
+
+        private enum CodingKeys: String, CodingKey { case dictionary }
     }
 
     /// The language a model will hear, when that is certain without a

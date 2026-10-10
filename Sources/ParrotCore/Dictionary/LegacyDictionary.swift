@@ -6,7 +6,7 @@ import Foundation
 extension UserDictionary {
     /// Decodes a `dictionary.json`, or throws a `LegacyDictionaryError` that
     /// names where the problem is and never quotes the file's contents.
-    static func parseLegacyJSON(_ data: Data) throws -> UserDictionary {
+    package static func parseLegacyJSON(_ data: Data) throws -> UserDictionary {
         // JSONSerialization reports syntax errors with a byte offset, which
         // becomes a line and column; JSONDecoder then reports type errors with
         // a key path.
@@ -27,16 +27,16 @@ extension UserDictionary {
     }
 
     /// Line and column (both from 1) of a byte offset.
-    struct Position: Equatable {
-        var line: Int
-        var column: Int
+    package struct Position: Equatable {
+        package var line: Int
+        package var column: Int
 
-        init(line: Int, column: Int) {
+        package init(line: Int, column: Int) {
             self.line = line
             self.column = column
         }
 
-        init(offset: Int, in data: Data) {
+        package init(offset: Int, in data: Data) {
             var line = 1
             var lineStart = 0
             for (i, byte) in data.prefix(max(0, offset)).enumerated() where byte == UInt8(ascii: "\n") {
@@ -97,12 +97,12 @@ extension UserDictionary {
 
 /// Why `dictionary.json` did not convert. Descriptions give a position or key
 /// path and never quote the file.
-enum LegacyDictionaryError: Error, Equatable, CustomStringConvertible {
+package enum LegacyDictionaryError: Error, Equatable, CustomStringConvertible {
     case syntax(position: UserDictionary.Position?)
     case notAnObject
     case schema(path: String, problem: String)
 
-    var description: String {
+    package var description: String {
         switch self {
         case .syntax(let position?):
             return "invalid JSON at line \(position.line), column \(position.column)"

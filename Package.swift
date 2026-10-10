@@ -4,6 +4,10 @@ import PackageDescription
 let package = Package(
     name: "parrot",
     platforms: [.macOS(.v14)],
+    products: [
+        // The dictation engine, for apps that link it without Parrot's app parts.
+        .library(name: "ParrotCore", targets: ["ParrotCore"]),
+    ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0"),
         // WhisperKit, renamed argmax-oss-swift. 1.1.0 is the first release with
@@ -15,19 +19,27 @@ let package = Package(
         .package(url: "https://github.com/sparkle-project/Sparkle.git", from: "2.6.0"),
     ],
     targets: [
-        // All behaviour: capture, hotkey, transcription, pipeline, settings, UI.
+        // The engine: capture, the hotkey gesture, transcription, the
+        // dictionary. No UI, no settings store, no updater.
         .target(
             name: "ParrotCore",
             dependencies: [
                 .product(name: "WhisperKit", package: "argmax-oss-swift"),
+            ]
+        ),
+        // The app: dictation loop, delivery at the cursor, settings, UI, updater.
+        .target(
+            name: "ParrotApp",
+            dependencies: [
+                "ParrotCore",
                 .product(name: "Sparkle", package: "Sparkle"),
             ]
         ),
-        // Thin entry point: ArgumentParser commands that call into ParrotCore.
+        // Thin entry point: ArgumentParser commands that call into ParrotApp.
         .executableTarget(
             name: "parrot",
             dependencies: [
-                "ParrotCore",
+                "ParrotApp",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ]
         ),
@@ -40,10 +52,10 @@ let package = Package(
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ]
         ),
-        // Unit tests against ParrotCore.
+        // Unit tests against ParrotCore and ParrotApp.
         .testTarget(
             name: "ParrotTests",
-            dependencies: ["ParrotCore"]
+            dependencies: ["ParrotCore", "ParrotApp"]
         ),
         // Unit tests for the benchmarks' pure parts.
         .testTarget(

@@ -15,20 +15,20 @@ import Foundation
 /// right for logs and wrong here).
 package final class DictionaryStore: @unchecked Sendable {
     /// A dictionary with its compiled replacement pass.
-    struct Loaded {
-        let dictionary: UserDictionary
-        let replacer: DictionaryReplacer
+    package struct Loaded {
+        package let dictionary: UserDictionary
+        package let replacer: DictionaryReplacer
 
-        init(_ dictionary: UserDictionary) {
+        package init(_ dictionary: UserDictionary) {
             self.dictionary = dictionary
             self.replacer = DictionaryReplacer(dictionary)
         }
     }
 
     /// Larger than any hand-written dictionary; refuses anything absurd.
-    static let maxBytes = 1 << 20
+    package static let maxBytes = 1 << 20
 
-    let file: URL
+    package let file: URL
     private let log: (String) -> Void
     private let lock = NSLock()
     private var loaded = Loaded(.empty)
@@ -43,7 +43,7 @@ package final class DictionaryStore: @unchecked Sendable {
 
     /// The dictionary to use for this dictation, reloaded first if the file
     /// changed.
-    func current() -> Loaded {
+    package func current() -> Loaded {
         lock.lock()
         defer { lock.unlock() }
         refresh()
@@ -55,7 +55,7 @@ package final class DictionaryStore: @unchecked Sendable {
     /// directory owner-only if it is missing, and never touches an existing one.
     /// Returns true if it wrote the file.
     @discardableResult
-    func createIfMissing() -> Bool {
+    package func createIfMissing() -> Bool {
         let fm = FileManager.default
         guard Paths.fileType(file.path) == nil else { return false }
         let dir = file.deletingLastPathComponent()
@@ -155,7 +155,7 @@ package final class DictionaryStore: @unchecked Sendable {
     }
 
     /// Why the file at `path`, already resolved, can't be used, or nil.
-    static func problem(with st: stat, at path: String) -> String? {
+    package static func problem(with st: stat, at path: String) -> String? {
         if st.st_mode & S_IFMT != S_IFREG { return "\(path) is not a regular file" }
         if st.st_uid != getuid() { return "\(path) is not owned by you" }
         if st.st_size > maxBytes { return "\(path) is larger than \(maxBytes / 1024) KB" }

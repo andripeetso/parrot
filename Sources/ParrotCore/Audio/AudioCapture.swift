@@ -12,7 +12,7 @@ import Foundation
 package final class AudioCapture {
     package static let targetSampleRate: Double = 16_000
 
-    static let targetFormat = AVAudioFormat(
+    package static let targetFormat = AVAudioFormat(
         commonFormat: .pcmFormatFloat32,
         sampleRate: targetSampleRate,
         channels: 1,
@@ -21,9 +21,9 @@ package final class AudioCapture {
 
     /// Called for every audio buffer with the buffer's RMS level (0…~1).
     /// Invoked on an arbitrary thread; hop to main if you touch UI.
-    var onLevel: ((Float) -> Void)?
+    package var onLevel: ((Float) -> Void)?
 
-    let mode: CaptureMode
+    package let mode: CaptureMode
 
     /// Counts and timings of the last finished capture, including press to
     /// first sample. Nil until one finishes.
@@ -92,7 +92,7 @@ package final class AudioCapture {
     /// route changed mid-recording; the failure is logged. `finish()` is the
     /// same with the failure thrown instead.
     @discardableResult
-    func stop() -> [Float] {
+    package func stop() -> [Float] {
         do {
             return try finish()
         } catch {
@@ -121,7 +121,7 @@ package final class AudioCapture {
     /// and its first non-zero sample, were captured, then convert to 16 kHz
     /// and append. `firstFrame` and `now` are `HostClock` nanoseconds. A
     /// buffer outside a recording is counted and dropped.
-    static func inputHandler(
+    package static func inputHandler(
         buffer: CaptureBuffer,
         converters: ConverterCache,
         onLevel: ((Float) -> Void)?
@@ -142,7 +142,7 @@ package final class AudioCapture {
     }
 
     /// The first frame in which any channel is not exactly zero, or nil.
-    static func firstNonZeroFrame(_ pcm: AVAudioPCMBuffer) -> Int? {
+    package static func firstNonZeroFrame(_ pcm: AVAudioPCMBuffer) -> Int? {
         guard let channels = pcm.floatChannelData else { return nil }
         let interleaved = pcm.format.isInterleaved
         let stride = pcm.stride
@@ -226,7 +226,7 @@ package enum WAVWriter {
     }
 }
 
-func computeRMS<C: Collection>(_ samples: C) -> Float where C.Element == Float {
+package func computeRMS<C: Collection>(_ samples: C) -> Float where C.Element == Float {
     guard !samples.isEmpty else { return 0 }
     var sum: Double = 0
     for s in samples { sum += Double(s * s) }

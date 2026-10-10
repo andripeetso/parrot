@@ -27,9 +27,9 @@ import Foundation
 ///
 /// `start`, `stop` and every reaction to a device change run on one private
 /// queue, so a change arriving during a release cannot race it.
-final class HALInput: CaptureInput {
+package final class HALInput: CaptureInput {
     /// What a device notification means for a unit built for one input.
-    enum Change: Equatable {
+    package enum Change: Equatable {
         /// Nothing the unit depends on changed.
         case none
         /// The same device now runs at this rate or channel count.
@@ -39,7 +39,7 @@ final class HALInput: CaptureInput {
         case route
     }
 
-    let keepsPrepared: Bool
+    package let keepsPrepared: Bool
 
     private let control = DispatchQueue(label: "parrot.capture.hal")
     // Everything below is touched only on `control`.
@@ -53,7 +53,7 @@ final class HALInput: CaptureInput {
     /// The input changed while idle; rebuild before the next start.
     private var stale = false
 
-    init(keepsPrepared: Bool) {
+    package init(keepsPrepared: Bool) {
         self.keepsPrepared = keepsPrepared
     }
 
@@ -65,7 +65,7 @@ final class HALInput: CaptureInput {
 
     /// Builds and initializes the unit for the current default input without
     /// starting it. Does nothing if it is already built for that device.
-    func prepare() throws {
+    package func prepare() throws {
         let device = try InputDevice.current()
         try control.sync { try prepare(device: device) }
     }
@@ -73,7 +73,7 @@ final class HALInput: CaptureInput {
     /// With `keepsPrepared`, builds the unit ahead of the first press so a
     /// press only has to start it. Never starts the device. Skipped until
     /// microphone access is granted.
-    func prepareIdle() {
+    package func prepareIdle() {
         guard keepsPrepared, MicrophoneAccess.status == .authorized else { return }
         do {
             try prepare()
@@ -82,7 +82,7 @@ final class HALInput: CaptureInput {
         }
     }
 
-    func start(device: InputDevice, sink: InputSink) throws -> InputDevice {
+    package func start(device: InputDevice, sink: InputSink) throws -> InputDevice {
         try control.sync {
             try prepare(device: device)
             guard let unit, let context, let delivering else { throw CaptureError.noInputDevice }
@@ -98,7 +98,7 @@ final class HALInput: CaptureInput {
         }
     }
 
-    func stop() {
+    package func stop() {
         control.sync {
             guard let unit, let context else { return }
             if context.isRecording {
@@ -248,7 +248,7 @@ final class HALInput: CaptureInput {
     /// The format the unit delivers for an input at `sampleRate` with
     /// `channels`, or nil if that input cannot be recorded (0 Hz, 0 channels,
     /// not finite). Channels past the second are dropped.
-    static func clientFormat(sampleRate: Double, channels: UInt32) -> AVAudioFormat? {
+    package static func clientFormat(sampleRate: Double, channels: UInt32) -> AVAudioFormat? {
         guard (try? InputDevice.validate(sampleRate: sampleRate, channels: channels)) != nil else { return nil }
         return AVAudioFormat(
             commonFormat: .pcmFormatFloat32,
@@ -259,13 +259,13 @@ final class HALInput: CaptureInput {
     }
 
     /// Whether a unit built for `built` can record `current` as is.
-    static func sameInput(_ built: InputDevice, _ current: InputDevice) -> Bool {
+    package static func sameInput(_ built: InputDevice, _ current: InputDevice) -> Bool {
         built.id == current.id && built.sampleRate == current.sampleRate && built.channels == current.channels
     }
 
     /// What `current`, a fresh read of the input, means for a unit built for
     /// `built`.
-    static func classify(built: InputDevice, current: DeviceWatcher.Snapshot) -> Change {
+    package static func classify(built: InputDevice, current: DeviceWatcher.Snapshot) -> Change {
         guard current.defaultInput == built.id, current.isAlive else { return .route }
         if sameInput(built, current.device) { return .none }
         guard (try? InputDevice.validate(sampleRate: current.device.sampleRate, channels: current.device.channels)) != nil else {
@@ -304,50 +304,50 @@ final class HALInput: CaptureInput {
 /// What the render callback needs, shared between the realtime thread and
 /// the control queue.
 private final class RenderContext: @unchecked Sendable {
-    let unit: AudioUnit
+    package let unit: AudioUnit
     private let lock = NSLock()
     private var pcm: AVAudioPCMBuffer
     private var sink: InputSink?
 
-    init(unit: AudioUnit, pcm: AVAudioPCMBuffer) {
+    package init(unit: AudioUnit, pcm: AVAudioPCMBuffer) {
         self.unit = unit
         self.pcm = pcm
     }
 
-    var isRecording: Bool {
+    package var isRecording: Bool {
         lock.lock()
         defer { lock.unlock() }
         return sink != nil
     }
 
-    func begin(_ sink: InputSink) {
+    package func begin(_ sink: InputSink) {
         lock.lock()
         defer { lock.unlock() }
         self.sink = sink
     }
 
-    func end() {
+    package func end() {
         lock.lock()
         defer { lock.unlock() }
         sink = nil
     }
 
     /// A buffer in the unit's new format. Only while the unit is stopped.
-    func replace(_ pcm: AVAudioPCMBuffer) {
+    package func replace(_ pcm: AVAudioPCMBuffer) {
         lock.lock()
         defer { lock.unlock() }
         self.pcm = pcm
     }
 
     /// Discards the recording in progress, if any.
-    func routeChanged() {
+    package func routeChanged() {
         lock.lock()
         let sink = self.sink
         lock.unlock()
         sink?.routeChanged()
     }
 
-    func render(
+    package func render(
         _ flags: UnsafeMutablePointer<AudioUnitRenderActionFlags>,
         _ timestamp: UnsafePointer<AudioTimeStamp>,
         _ bus: UInt32,
@@ -390,18 +390,18 @@ private let halInputCallback: AURenderCallback = { refCon, flags, timestamp, bus
 /// switching, the device's rate or input channels changing, or the device
 /// disappearing, and calls `changed`, which re-reads and decides. Listeners
 /// are removed when this is released.
-final class DeviceWatcher {
+package final class DeviceWatcher {
     /// A fresh read of the input a unit was built for.
-    struct Snapshot: Equatable {
-        var defaultInput: AudioDeviceID?
-        var isAlive: Bool
-        var device: InputDevice
+    package struct Snapshot: Equatable {
+        package var defaultInput: AudioDeviceID?
+        package var isAlive: Bool
+        package var device: InputDevice
     }
 
     private let queue = DispatchQueue(label: "parrot.capture.device-watcher")
     private var registrations: [(AudioObjectID, AudioObjectPropertyAddress, AudioObjectPropertyListenerBlock)] = []
 
-    init(device: AudioDeviceID, changed: @escaping () -> Void) {
+    package init(device: AudioDeviceID, changed: @escaping () -> Void) {
         let block: AudioObjectPropertyListenerBlock = { _, _ in changed() }
         let system = AudioObjectID(kAudioObjectSystemObject)
         add(system, kAudioHardwarePropertyDefaultInputDevice, kAudioObjectPropertyScopeGlobal, block)
@@ -430,7 +430,7 @@ final class DeviceWatcher {
     }
 
     /// Reads the default input and `id`'s presence, rate and channels now.
-    static func snapshot(of id: AudioDeviceID) -> Snapshot {
+    package static func snapshot(of id: AudioDeviceID) -> Snapshot {
         Snapshot(
             defaultInput: InputDevice.defaultInputID(),
             isAlive: isAlive(id),

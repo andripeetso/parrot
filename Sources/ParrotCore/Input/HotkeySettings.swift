@@ -5,13 +5,13 @@ import CoreGraphics
 /// The `settings.json` field for this feature; see `Settings`. Give each new
 /// field a default and decode it in `init(from:)` with
 /// `decodeIfPresent(…) ?? default`, so older files and `{}` still load.
-struct HotkeySettings: Codable, Equatable {
+package struct HotkeySettings: Codable, Equatable {
     /// The modifier held to dictate. An unknown name decodes to the default.
-    var key: HotkeyKey = .fn
+    package var key: HotkeyKey = .fn
 
-    init() {}
+    package init() {}
 
-    init(from decoder: Decoder) throws {
+    package init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let name = try c.decodeIfPresent(String.self, forKey: .key)
         key = name.flatMap(HotkeyKey.init(rawValue:)) ?? .fn
@@ -32,7 +32,7 @@ public enum HotkeyKey: String, Codable, CaseIterable, Sendable {
     case rightShift = "right-shift"
 
     /// How the key is named in the menu and the Settings window.
-    var displayName: String {
+    package var displayName: String {
         switch self {
         case .fn: return "fn"
         case .leftOption: return "Left Option (⌥)"
@@ -47,7 +47,7 @@ public enum HotkeyKey: String, Codable, CaseIterable, Sendable {
     }
 
     /// The short name in the menu bar and log lines: "hold right ⌥ to dictate".
-    var shortName: String {
+    package var shortName: String {
         switch self {
         case .fn: return "fn"
         case .leftOption: return "left ⌥"
@@ -63,7 +63,7 @@ public enum HotkeyKey: String, Codable, CaseIterable, Sendable {
 
     /// The virtual keycode a `flagsChanged` event carries for this key
     /// (`kVK_Function`, `kVK_Option`, `kVK_RightOption`, …).
-    var keycode: Int64 {
+    package var keycode: Int64 {
         switch self {
         case .fn: return 63
         case .leftOption: return 58
@@ -78,7 +78,7 @@ public enum HotkeyKey: String, Codable, CaseIterable, Sendable {
     }
 
     /// The device-independent flag this key sets. Left and right share it.
-    var flag: CGEventFlags {
+    package var flag: CGEventFlags {
         switch self {
         case .fn: return .maskSecondaryFn
         case .leftOption, .rightOption: return .maskAlternate

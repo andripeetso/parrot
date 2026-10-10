@@ -1,8 +1,9 @@
 import ArgumentParser
 import Foundation
+import ParrotApp
 import ParrotCore
 
-// The entry point parses flags and calls ParrotCore. Behaviour lives there.
+// The entry point parses flags and calls ParrotApp. Behaviour lives there.
 
 struct Parrot: ParsableCommand {
     static let configuration = CommandConfiguration(

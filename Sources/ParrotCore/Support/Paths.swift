@@ -6,7 +6,7 @@ import Foundation
 package enum Paths {
     /// `$XDG_CONFIG_HOME/parrot`, default `~/.config/parrot` — the files a user
     /// edits and may keep in dotfiles: settings and the dictionary.
-    static var config: URL {
+    package static var config: URL {
         if let xdg = ProcessInfo.processInfo.environment["XDG_CONFIG_HOME"], xdg.hasPrefix("/") {
             return URL(fileURLWithPath: xdg, isDirectory: true).appendingPathComponent("parrot", isDirectory: true)
         }
@@ -17,67 +17,67 @@ package enum Paths {
     /// `~/Library/Application Support/parrot` — model weights and tokenizers.
     /// Not Caches: the system purges that under disk pressure, which would
     /// mean a surprise multi-GB download.
-    static var appSupport: URL { library("Application Support/parrot") }
+    package static var appSupport: URL { library("Application Support/parrot") }
 
     /// `~/Library/Logs/parrot` — the app's stdout/stderr.
-    static var logs: URL { library("Logs/parrot") }
+    package static var logs: URL { library("Logs/parrot") }
 
     /// `~/Library/Caches/parrot` — debug output such as `--dump-wav`.
     package static var caches: URL { library("Caches/parrot") }
 
     /// `settings.json` in `config`: preferences, read and written by `SettingsStore`.
-    static var settingsFile: URL { config.appendingPathComponent("settings.json") }
+    package static var settingsFile: URL { config.appendingPathComponent("settings.json") }
 
     /// `dictionary` in `config`: the user's words and what each replaces, a
     /// plain-text table. No extension, so it reads as a name, not a format.
-    static var dictionaryFile: URL { config.appendingPathComponent("dictionary") }
+    package static var dictionaryFile: URL { config.appendingPathComponent("dictionary") }
 
     /// `dictionary.json` in `config`: the old format, converted once at
     /// startup by `DictionaryMigration`.
-    static var legacyDictionaryFile: URL { config.appendingPathComponent("dictionary.json") }
+    package static var legacyDictionaryFile: URL { config.appendingPathComponent("dictionary.json") }
 
     /// The app's stdout.
-    static var daemonOutLog: URL { logs.appendingPathComponent("parrot.out.log") }
+    package static var daemonOutLog: URL { logs.appendingPathComponent("parrot.out.log") }
 
     /// The app's stderr.
-    static var daemonErrLog: URL { logs.appendingPathComponent("parrot.err.log") }
+    package static var daemonErrLog: URL { logs.appendingPathComponent("parrot.err.log") }
 
     /// Where `--dump-wav` writes the most recent capture.
     package static var dumpWav: URL { caches.appendingPathComponent("last-capture.wav") }
 
     /// `~/Library/LaunchAgents/<label>.plist`.
-    static func launchAgentPlist(label: String) -> URL {
+    package static func launchAgentPlist(label: String) -> URL {
         library("LaunchAgents").appendingPathComponent("\(label).plist")
     }
 
     /// The LaunchAgent that started pre-app versions at login. The app
     /// removes it; `SMAppService` replaced it.
-    static var legacyLaunchAgentPlist: URL { launchAgentPlist(label: legacyLaunchAgentLabel) }
+    package static var legacyLaunchAgentPlist: URL { launchAgentPlist(label: legacyLaunchAgentLabel) }
 
     /// The old LaunchAgent's label.
-    static let legacyLaunchAgentLabel = "com.digimata.parrot"
+    package static let legacyLaunchAgentLabel = "com.digimata.parrot"
 
     /// Where the `parrot` command lives on `PATH`: a symlink to the executable
     /// inside Parrot.app, or a plain binary from a pre-app install.
-    static let commandLineLink = URL(fileURLWithPath: "/usr/local/bin/parrot")
+    package static let commandLineLink = URL(fileURLWithPath: "/usr/local/bin/parrot")
 
     /// Held with `flock` by the running dictation loop, so the app and a
     /// foreground `parrot` never both listen to the hotkey. In Application
     /// Support, not Caches, because `parrot install --uninstall` removes Caches.
-    static var instanceLock: URL { appSupport.appendingPathComponent("parrot.lock") }
+    package static var instanceLock: URL { appSupport.appendingPathComponent("parrot.lock") }
 
     /// `~/Documents`. The model cache must not resolve under it.
-    static var documents: URL {
+    package static var documents: URL {
         FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents")
     }
 
     /// Pre-0.0.6 files that held transcripts and audio in world-readable /tmp.
-    static let legacyTmpFiles = ["/tmp/parrot.out.log", "/tmp/parrot.err.log", "/tmp/parrot-last.wav"]
+    package static let legacyTmpFiles = ["/tmp/parrot.out.log", "/tmp/parrot.err.log", "/tmp/parrot-last.wav"]
 
     /// Pre-0.0.6 model cache: swift-transformers' default download base,
     /// shared with other apps. The launchd daemon can't read ~/Documents, so
     /// only foreground commands may touch it.
-    static var legacyModels: URL {
+    package static var legacyModels: URL {
         FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/huggingface", isDirectory: true)
     }
 
@@ -114,7 +114,7 @@ package enum Paths {
 
     /// The type of the item at `path` without following symlinks, or nil if
     /// nothing is there.
-    static func fileType(_ path: String) -> FileAttributeType? {
+    package static func fileType(_ path: String) -> FileAttributeType? {
         guard let attrs = try? FileManager.default.attributesOfItem(atPath: path) else { return nil }
         return attrs[.type] as? FileAttributeType
     }
@@ -126,11 +126,11 @@ package enum Paths {
     }
 }
 
-enum PathError: Error, CustomStringConvertible {
+package enum PathError: Error, CustomStringConvertible {
     case notADirectory(String)
     case notARegularFile(String)
 
-    var description: String {
+    package var description: String {
         switch self {
         case .notADirectory(let p): return "\(p) exists but is not a directory"
         case .notARegularFile(let p): return "\(p) is a symlink or not a regular file"

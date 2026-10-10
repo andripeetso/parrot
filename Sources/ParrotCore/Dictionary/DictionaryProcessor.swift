@@ -3,10 +3,14 @@ import Foundation
 /// The dictionary's replacement pass, run on every transcript whatever the
 /// engine. Reads the current dictionary from the store, so an edit applies to
 /// the next dictation.
-struct DictionaryProcessor: TranscriptProcessor {
-    let store: DictionaryStore
+package struct DictionaryProcessor: TranscriptProcessor {
+    package let store: DictionaryStore
 
-    func process(_ transcript: Transcript) -> Transcript {
+    package init(store: DictionaryStore) {
+        self.store = store
+    }
+
+    package func process(_ transcript: Transcript) -> Transcript {
         Transcript(text: store.current().replacer.apply(to: transcript.text))
     }
 }
@@ -24,16 +28,16 @@ struct DictionaryProcessor: TranscriptProcessor {
 /// - Replacement text is inserted literally; `$` and `\` mean nothing special.
 /// - A `from` listed in `replacements` takes precedence over the same word in
 ///   `terms`, and the first rule listed wins among duplicates.
-struct DictionaryReplacer {
-    struct Rule: Equatable {
-        var from: String
-        var to: String
+package struct DictionaryReplacer {
+    package struct Rule: Equatable {
+        package var from: String
+        package var to: String
     }
 
-    let rules: [Rule]
+    package let rules: [Rule]
     private let regex: NSRegularExpression?
 
-    init(_ dictionary: UserDictionary) {
+    package init(_ dictionary: UserDictionary) {
         var candidates: [Rule] = []
         for replacement in dictionary.replacements {
             let to = replacement.to.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -44,7 +48,7 @@ struct DictionaryReplacer {
         self.init(rules: candidates)
     }
 
-    init(rules candidates: [Rule]) {
+    package init(rules candidates: [Rule]) {
         // Drop empty sources and later duplicates. Duplicates are found with
         // the same case-insensitive comparison the regex uses.
         var kept: [Rule] = []
@@ -81,7 +85,7 @@ struct DictionaryReplacer {
         self.regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
     }
 
-    func apply(to text: String) -> String {
+    package func apply(to text: String) -> String {
         guard let regex, !text.isEmpty else { return text }
         let source = text as NSString
         let matches = regex.matches(in: text, range: NSRange(location: 0, length: source.length))

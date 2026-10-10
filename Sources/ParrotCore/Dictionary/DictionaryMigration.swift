@@ -16,8 +16,8 @@ import Foundation
 ///
 /// The example sentences are returned for the caller to move into
 /// `settings.json`; the text file has no place for them.
-enum DictionaryMigration {
-    enum Outcome: Equatable {
+package enum DictionaryMigration {
+    package enum Outcome: Equatable {
         /// There is nothing to convert, or the new file already exists.
         case nothingToDo
         /// Converted; these are the old file's example sentences.
@@ -28,7 +28,7 @@ enum DictionaryMigration {
         case failed
     }
 
-    static func run(
+    package static func run(
         file: URL = Paths.dictionaryFile,
         legacy: URL = Paths.legacyDictionaryFile,
         log: (String) -> Void = { Log.warning($0) }
