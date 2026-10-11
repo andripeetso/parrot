@@ -33,7 +33,7 @@ package final class DictationController {
     private let processors: [TranscriptProcessor]
     private let observers: [DictationObserver]
     private let dumpWav: Bool
-    private let delivery: TextDelivery
+    private let delivery: TranscriptDelivery
     /// What to tell the transcriber about each dictation, asked once per
     /// release. Features such as the dictionary fill it; the controller only
     /// passes it on.
@@ -49,7 +49,7 @@ package final class DictationController {
         processors: [TranscriptProcessor] = [],
         observers: [DictationObserver],
         dumpWav: Bool = false,
-        delivery: TextDelivery,
+        delivery: TranscriptDelivery,
         context: @escaping @MainActor () -> TranscriptionContext = { TranscriptionContext() }
     ) {
         self.capture = capture
@@ -135,7 +135,13 @@ package final class DictationController {
                 Log.info(String(format: "→ %.2fs · %d chars", elapsed, raw.text.count))
                 let transcript = processors.reduce(raw) { $1.process($0) }
                 let processed = CFAbsoluteTimeGetCurrent()
-                let delivered = Result { try delivery.deliver(transcript.text, focusAtStart: focus) }
+                let delivered: Result<Void, Error>
+                do {
+                    try await delivery.deliver(transcript.text, focusAtStart: focus)
+                    delivered = .success(())
+                } catch {
+                    delivered = .failure(error)
+                }
                 let done = CFAbsoluteTimeGetCurrent()
                 inFlight -= 1
                 settle()

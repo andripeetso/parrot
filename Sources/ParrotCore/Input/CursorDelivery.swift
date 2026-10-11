@@ -35,20 +35,20 @@ package enum DeliveryDecision: Equatable {
     }
 }
 
-/// The delivery step of the dictation loop: checks focus against the
-/// snapshot from recording start, then injects, copies or discards. An
+/// Parrot's delivery: checks focus against the snapshot from recording
+/// start, then injects at the cursor, copies or discards. An
 /// injected transcript gets a trailing space, and a leading one when the
 /// text before the cursor needs it (`Spacing`).
 @MainActor
-package final class TextDelivery {
+package final class CursorDelivery: TranscriptDelivery {
     private let injector: TextInjector
 
-    package init(mode: InjectMode) {
+    package init(mode: InjectMode = .paste) {
         self.injector = TextInjector(mode: mode)
     }
 
     /// Throws `DeliveryError` when the transcript did not reach the cursor.
-    package func deliver(_ text: String, focusAtStart: FocusSnapshot?) throws {
+    package func deliver(_ text: String, focusAtStart: FocusSnapshot?) async throws {
         guard !text.isEmpty else { return }
         let now = FocusSnapshot.capture()
         switch DeliveryDecision.decide(start: focusAtStart, now: now) {

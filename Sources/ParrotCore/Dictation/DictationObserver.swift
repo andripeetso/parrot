@@ -14,7 +14,7 @@ package struct DictationResult: Equatable, Sendable {
     package var transcriber: TranscriberTimings?
     /// Seconds in the `TranscriptProcessor`s.
     package var processing: TimeInterval = 0
-    /// Seconds to deliver the text to the cursor.
+    /// Seconds in the `TranscriptDelivery`.
     package var delivery: TimeInterval = 0
     /// Seconds from the hotkey release to the text being delivered.
     package var releaseToText: TimeInterval = 0
@@ -30,7 +30,8 @@ package enum DictationError: Error {
     case cancelled
 }
 
-/// Follows the dictation loop: the overlay, the menu bar, and later stats.
+/// Follows the dictation loop: in Parrot, the overlay, the menu bar and the
+/// stats.
 ///
 /// `DictationController` calls these on the main actor, in the order the
 /// observers were registered. Every method has an empty default, so an
@@ -44,9 +45,10 @@ package protocol DictationObserver: AnyObject {
     func dictationTranscribing()
     /// The transcript was delivered.
     func dictationFinished(_ result: DictationResult)
-    /// Nothing reached the cursor: capture failed (`CaptureError`), no audio
-    /// (`DictationError.noAudio`), the transcriber threw, or delivery was
-    /// refused (`DeliveryError`).
+    /// Nothing was delivered: capture failed (`CaptureError`), no audio
+    /// (`DictationError.noAudio`), the recording was discarded
+    /// (`DictationError.cancelled`), the transcriber threw, or the
+    /// `TranscriptDelivery` threw (`DeliveryError` from `CursorDelivery`).
     func dictationFailed(_ error: Error)
 }
 
