@@ -1,6 +1,6 @@
 # Architecture
 
-Last updated: `2026.10.10`
+Last updated: `2026.10.11`
 
 > This document is the target structure. Contributors and agents working on an issue read it first: it says where each kind of change belongs, so parallel work composes instead of colliding.
 
@@ -45,8 +45,8 @@ Parrot is a macOS menu-bar dictation app. Hold a key, speak, release, and the tr
 
 ```
 Package.swift
-  ParrotCore      library     the engine: capture, hotkey gesture, transcription, dictionary (a library product)
-  ParrotApp       library     the app: dictation loop, delivery, settings, stats, UI, updater
+  ParrotCore      library     the engine: capture, hotkey gesture, transcription, dictionary, dictation loop, cursor delivery (a library product)
+  ParrotApp       library     the app: wiring, settings, stats, UI, updater
   parrot          executable  thin entry point: ArgumentParser commands that call into ParrotApp
   parrot-bench    executable  developer benchmarks against ParrotCore
   ParrotTests     tests       unit tests against ParrotCore and ParrotApp
@@ -56,7 +56,7 @@ Package.swift
 
 The executable holds no logic beyond parsing flags and calling ParrotApp. Anything worth testing lives in the two libraries.
 
-`ParrotCore` is exported so another app can dictate with the engine without Parrot's interface or updater; it depends only on WhisperKit ([ADR-006](decisions/006-engine-library.md)). Its `public` declarations are that app's API, the rest of the engine is `package` for Parrot's own targets, and app code stays internal. Sparkle, SwiftUI and the settings store never enter `ParrotCore`.
+`ParrotCore` is exported so another app can dictate with the engine without Parrot's interface or updater; it depends only on WhisperKit ([ADR-006](decisions/006-engine-library.md)). That app runs the same `DictationController` with its own `TranscriptDelivery` and observers. Its `public` declarations are that app's API, the rest of the engine is `package` for Parrot's own targets, and app code stays internal. Sparkle, SwiftUI and the settings store never enter `ParrotCore`.
 
 ## 3. Layout
 
@@ -71,6 +71,14 @@ Sources/ParrotCore/                the engine, linked by other apps through the 
     TapRecovery.swift           the tap's health and recovery when macOS disables it
     HotkeySettings.swift        the hotkey setting and the keys it can be
     Gesture.swift               press/release filtering: short-tap discard, chord cancel (pure, tested)
+    FocusSnapshot.swift         what was focused, whether it is editable or secure, and the character before the cursor
+    CursorDelivery.swift        Parrot's TranscriptDelivery: inject, copy or discard, from the focus at start and at delivery (pure decision, tested)
+    Spacing.swift               the spaces around a transcript: always after, before when the text there needs it (pure, tested)
+    TextInjector.swift          delivery into the focused field (paste or typed Unicode)
+  Dictation/
+    DictationController.swift   the dictation loop: gesture → capture → transcribe → process → deliver
+    DictationObserver.swift     observer protocol, DictationResult (counts and timings, never text) and DictationError
+    TranscriptDelivery.swift    the protocol the loop delivers through
   Audio/
     AudioCapture.swift          capture: permission and device checks, format conversion, per-capture stats
     CaptureInput.swift          CaptureMode and the protocol each way of running the mic implements
@@ -100,13 +108,11 @@ Sources/ParrotCore/                the engine, linked by other apps through the 
 
 Sources/ParrotApp/                 the app: everything Parrot.app adds around the engine
   App/
-    DictationController.swift   the dictation loop: gesture → capture → transcribe → process → deliver
-    DictationObserver.swift     observer protocol and DictationResult (counts and timings, never text)
     LatencyLog.swift            one log line per dictation: press-to-first-sample, release-to-text and each stage, as a DictationObserver
     Startup.swift               startup checks and StartupFailure (permanent vs transient)
     Permissions.swift           Accessibility and Microphone state, and what each Allow button asks for (pure, tested)
     Onboarding.swift            when the onboarding window shows, its menus, and what Get Started saves (pure, tested)
-    Daemon.swift                the `run` command: startup, wiring, run loop
+    Daemon.swift                the `run` command: startup, wiring (the controller with CursorDelivery and the overlay), run loop
     ModelSwitcher.swift         a model change while running: loads the new model behind the menu bar, swaps it in between dictations
     Updater.swift               Sparkle auto-update, started only in the app role
     AppLaunch.swift             the app role: bundle detection, single instance, migration off the old LaunchAgent
@@ -117,11 +123,6 @@ Sources/ParrotApp/                 the app: everything Parrot.app adds around th
   Settings/
     Settings.swift              Codable settings value with defaults
     SettingsStore.swift         load, atomic save, file watching, change publishing
-  Input/
-    FocusSnapshot.swift         what was focused, whether it is editable or secure, and the character before the cursor
-    Delivery.swift              inject, copy or discard, from the focus at start and at delivery (pure decision, tested)
-    Spacing.swift               the spaces around a transcript: always after, before when the text there needs it (pure, tested)
-    TextInjector.swift          delivery into the focused field (paste or typed Unicode)
   Stats/
     StatsRecorder.swift         counts only, as a DictationObserver
   UI/
@@ -168,7 +169,8 @@ HotkeyMonitor ──flags──▶ Gesture ──start/stop──▶ DictationCo
                                   DictionaryProcessor, later others
                                                      │ Transcript
                                                      ▼
-                              delivery: paste at the cursor if focus is unchanged,
+                              TranscriptDelivery; Parrot's is CursorDelivery:
+                                        paste at the cursor if focus is unchanged,
                                         with a trailing space, and a leading one if needed;
                                         clipboard if focus moved; discard in a password field
                                                      │
@@ -186,7 +188,8 @@ Features plug in at one of these points. They do not add branches to `DictationC
 |---|---|---|
 | `TranscriptionContext` | value passed to `transcribe`: language, prompt text | dictionary prompting, language |
 | `TranscriptProcessor` | `func process(_ transcript: Transcript) -> Transcript`, synchronous, pure where possible | dictionary replacements; future cleanup passes |
-| Delivery decision | chooses injector or fallback from the `FocusSnapshot` and the result | secure fields and focus drift |
+| `TranscriptDelivery` | `func deliver(_ text: String, focusAtStart: FocusSnapshot?) async throws`; throwing reports `dictationFailed` | `CursorDelivery`; an app linking the engine supplies its own |
+| Delivery decision | `CursorDelivery` chooses injector or fallback from the `FocusSnapshot` and the result | secure fields and focus drift |
 | Delivery spacing | `Spacing.spaced`: a trailing space always, a leading one when the text before the cursor needs it | a space between dictations |
 | `DictationObserver` | `dictationStarted`, `dictationTranscribing`, `dictationFinished(DictationResult)`, `dictationFailed`; each has an empty default | overlay, menu bar, stats, latency |
 | `Settings` sections | a field in `Settings` plus a view in `UI/Sections/` | hotkey, model, language, dictionary editor, input device, stats |
