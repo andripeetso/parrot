@@ -1,8 +1,10 @@
 # ADR-001 :: Core library and extension points
 
-Last updated: `2026.09.27`
+Last updated: `2026.10.10`
 
 > All behaviour lives in a `ParrotCore` library behind a thin `parrot` executable, and features attach to the dictation loop at named extension points instead of editing it. This keeps the loop small, makes the logic testable, and lets several contributors or agents work on features at once without colliding.
+>
+> Amended by [ADR-006](006-engine-library.md): `ParrotCore` now holds only the engine, and the dictation loop, settings, UI and updater live in `ParrotApp`.
 
 ## 1. Decision
 
