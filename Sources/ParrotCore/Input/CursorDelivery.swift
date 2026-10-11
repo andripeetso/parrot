@@ -1,16 +1,15 @@
 import Foundation
-import ParrotCore
 
 /// A transcript that was not inserted at the cursor, with the line the
 /// overlay shows.
-enum DeliveryError: UserFacingError, Equatable {
+package enum DeliveryError: UserFacingError, Equatable {
     /// A password field had focus at start or at delivery. Nothing was typed
     /// or copied.
     case secureField
     /// Focus moved during the dictation. The transcript is on the clipboard.
     case focusChanged
 
-    var userMessage: String {
+    package var userMessage: String {
         switch self {
         case .secureField: return "password field, transcript discarded"
         case .focusChanged: return "focus changed, transcript copied"
@@ -19,7 +18,7 @@ enum DeliveryError: UserFacingError, Equatable {
 }
 
 /// Where a finished transcript goes. Pure, so it is tested.
-enum DeliveryDecision: Equatable {
+package enum DeliveryDecision: Equatable {
     /// Insert at the cursor.
     case inject
     /// A secure field had focus at start or at delivery: drop the transcript.
@@ -29,7 +28,7 @@ enum DeliveryDecision: Equatable {
 
     /// `start` is nil when no recording start was seen; then only the
     /// secure-field check applies.
-    static func decide(start: FocusSnapshot?, now: FocusSnapshot) -> DeliveryDecision {
+    package static func decide(start: FocusSnapshot?, now: FocusSnapshot) -> DeliveryDecision {
         if start?.isSecure == true || now.isSecure { return .discardSecure }
         if let start, start.hasChanged(to: now) { return .copyToClipboard }
         return .inject
@@ -41,15 +40,15 @@ enum DeliveryDecision: Equatable {
 /// injected transcript gets a trailing space, and a leading one when the
 /// text before the cursor needs it (`Spacing`).
 @MainActor
-final class TextDelivery {
+package final class TextDelivery {
     private let injector: TextInjector
 
-    init(mode: InjectMode) {
+    package init(mode: InjectMode) {
         self.injector = TextInjector(mode: mode)
     }
 
     /// Throws `DeliveryError` when the transcript did not reach the cursor.
-    func deliver(_ text: String, focusAtStart: FocusSnapshot?) throws {
+    package func deliver(_ text: String, focusAtStart: FocusSnapshot?) throws {
         guard !text.isEmpty else { return }
         let now = FocusSnapshot.capture()
         switch DeliveryDecision.decide(start: focusAtStart, now: now) {

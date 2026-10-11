@@ -1,5 +1,4 @@
 import Foundation
-import ParrotCore
 
 /// The dictation loop: gesture → capture → transcribe → process → deliver.
 ///
@@ -19,14 +18,14 @@ import ParrotCore
 /// - A transcript that does not reach the cursor (a secure field, or focus
 ///   moved since the press) fails with its `DeliveryError`.
 @MainActor
-final class DictationController {
-    enum State: Equatable {
+package final class DictationController {
+    package enum State: Equatable {
         case idle
         case recording
         case transcribing
     }
 
-    private(set) var state: State = .idle
+    package private(set) var state: State = .idle
 
     private let capture: AudioCapture
     /// Replaced by `replaceTranscriber` when the model changes (#43).
@@ -44,7 +43,7 @@ final class DictationController {
     /// What had focus when the current recording started (#38).
     private var focusAtStart: FocusSnapshot?
 
-    init(
+    package init(
         capture: AudioCapture,
         transcriber: Transcriber,
         processors: [TranscriptProcessor] = [],
@@ -64,11 +63,11 @@ final class DictationController {
 
     /// Uses `transcriber` from the next release on. A transcription already
     /// running finishes with the one it started with.
-    func replaceTranscriber(_ transcriber: Transcriber) {
+    package func replaceTranscriber(_ transcriber: Transcriber) {
         self.transcriber = transcriber
     }
 
-    func handle(_ event: HotkeyMonitor.Event) {
+    package func handle(_ event: HotkeyMonitor.Event) {
         switch event {
         case .pressed: press()
         case .released: release()
@@ -76,7 +75,7 @@ final class DictationController {
         }
     }
 
-    func press() {
+    package func press() {
         do {
             try capture.start()
         } catch {
@@ -90,7 +89,7 @@ final class DictationController {
         observers.forEach { $0.dictationStarted() }
     }
 
-    func release() {
+    package func release() {
         let released = CFAbsoluteTimeGetCurrent()
         let samples: [Float]
         do {
@@ -167,7 +166,7 @@ final class DictationController {
 
     /// The gesture discarded this recording (a short tap, a chord, or a
     /// hotkey switch): stop capture and transcribe nothing.
-    func cancel() {
+    package func cancel() {
         guard state == .recording else { return }
         capture.stop()
         focusAtStart = nil

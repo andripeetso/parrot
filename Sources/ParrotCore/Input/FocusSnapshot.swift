@@ -1,27 +1,26 @@
 import AppKit
 import ApplicationServices
 import Foundation
-import ParrotCore
 
 /// What had keyboard focus at one moment: the frontmost app, its focused
 /// element, and whether that element is a secure (password) field.
 ///
 /// Taken at recording start and again right before delivery, over
 /// Accessibility, so delivery needs no watch on keystrokes or clicks.
-struct FocusSnapshot {
+package struct FocusSnapshot {
     /// The frontmost app, if any.
-    var pid: pid_t?
+    package var pid: pid_t?
     /// The focused element, if the app exposes one over Accessibility.
-    var element: FocusedElement?
+    package var element: FocusedElement?
     /// The focused element is a secure text field or reports protected content.
-    var isSecure: Bool
+    package var isSecure: Bool
 
     /// Upper bound on each Accessibility call, so a hung app cannot stall
     /// the main thread (and with it the hotkey tap).
     private static let messagingTimeout: Float = 0.25
 
     @MainActor
-    static func capture() -> FocusSnapshot {
+    package static func capture() -> FocusSnapshot {
         let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier
         let systemWide = AXUIElementCreateSystemWide()
         // On the system-wide element, this sets the timeout for every element.
@@ -40,7 +39,7 @@ struct FocusSnapshot {
     /// element must match when both snapshots saw one; an element seen only
     /// once is not a change, because Chromium and Electron apps build their
     /// Accessibility tree lazily and may expose nothing at recording start.
-    func hasChanged(to now: FocusSnapshot) -> Bool {
+    package func hasChanged(to now: FocusSnapshot) -> Bool {
         if pid != now.pid { return true }
         if let element, let other = now.element, element != other { return true }
         return false
@@ -67,14 +66,14 @@ struct FocusSnapshot {
 }
 
 /// An Accessibility element compared by identity (`CFEqual`).
-struct FocusedElement: Equatable {
-    let ref: AXUIElement
+package struct FocusedElement: Equatable {
+    package let ref: AXUIElement
 
-    init(_ ref: AXUIElement) {
+    package init(_ ref: AXUIElement) {
         self.ref = ref
     }
 
-    static func == (lhs: FocusedElement, rhs: FocusedElement) -> Bool {
+    package static func == (lhs: FocusedElement, rhs: FocusedElement) -> Bool {
         CFEqual(lhs.ref, rhs.ref)
     }
 
@@ -84,7 +83,7 @@ struct FocusedElement: Equatable {
     /// be half an emoji. Falls back to the whole value for apps without
     /// `AXStringForRange`. Call after `FocusSnapshot.capture()`, which sets
     /// the timeout, and never on a secure field.
-    func textBeforeCursor() -> TextBeforeCursor {
+    package func textBeforeCursor() -> TextBeforeCursor {
         var rangeValue: CFTypeRef?
         guard AXUIElementCopyAttributeValue(ref, kAXSelectedTextRangeAttribute as CFString, &rangeValue) == .success,
               let rangeValue, CFGetTypeID(rangeValue) == AXValueGetTypeID() else { return .unknown }

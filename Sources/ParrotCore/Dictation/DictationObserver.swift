@@ -1,30 +1,29 @@
 import Foundation
-import ParrotCore
 
 /// Counts and timings for one delivered dictation. Never the text.
-struct DictationResult: Equatable, Sendable {
+package struct DictationResult: Equatable, Sendable {
     /// Seconds of audio captured.
-    var captureDuration: TimeInterval
+    package var captureDuration: TimeInterval
     /// Seconds the transcriber took.
-    var transcriptionTime: TimeInterval
+    package var transcriptionTime: TimeInterval
     /// Characters delivered, after every `TranscriptProcessor`.
-    var charCount: Int
+    package var charCount: Int
     /// Seconds to stop the capture engine and collect its samples.
-    var captureStop: TimeInterval = 0
+    package var captureStop: TimeInterval = 0
     /// The transcriber's own breakdown, when the engine reports one.
-    var transcriber: TranscriberTimings?
+    package var transcriber: TranscriberTimings?
     /// Seconds in the `TranscriptProcessor`s.
-    var processing: TimeInterval = 0
+    package var processing: TimeInterval = 0
     /// Seconds to deliver the text to the cursor.
-    var delivery: TimeInterval = 0
+    package var delivery: TimeInterval = 0
     /// Seconds from the hotkey release to the text being delivered.
-    var releaseToText: TimeInterval = 0
+    package var releaseToText: TimeInterval = 0
     /// Seconds from the hotkey press to the capture time of the first
     /// recorded sample (#52): speech in that gap is lost. Nil if unknown.
-    var pressToFirstSample: TimeInterval?
+    package var pressToFirstSample: TimeInterval?
 }
 
-enum DictationError: Error {
+package enum DictationError: Error {
     /// The hotkey was released with no audio captured.
     case noAudio
     /// The recording was discarded: a short tap, a chord, or a hotkey switch (#42).
@@ -38,7 +37,7 @@ enum DictationError: Error {
 /// observer implements only what it needs. New behaviour that reacts to a
 /// dictation is an observer, not a branch in the controller.
 @MainActor
-protocol DictationObserver: AnyObject {
+package protocol DictationObserver: AnyObject {
     /// Recording started.
     func dictationStarted()
     /// The hotkey was released; the capture is being transcribed.
@@ -52,8 +51,8 @@ protocol DictationObserver: AnyObject {
 }
 
 extension DictationObserver {
-    func dictationStarted() {}
-    func dictationTranscribing() {}
-    func dictationFinished(_ result: DictationResult) {}
-    func dictationFailed(_ error: Error) {}
+    package func dictationStarted() {}
+    package func dictationTranscribing() {}
+    package func dictationFinished(_ result: DictationResult) {}
+    package func dictationFailed(_ error: Error) {}
 }
