@@ -8,25 +8,25 @@ import WhisperKit
 ///
 /// Each choice in `standard` was measured with `parrot-bench transcription` (#49); the
 /// commit that set it has the numbers.
-package struct WhisperTuning: Equatable, @unchecked Sendable {
-    package var melCompute: MLComputeUnits = .cpuAndGPU
-    package var encoderCompute: MLComputeUnits = .cpuAndNeuralEngine
-    package var decoderCompute: MLComputeUnits = .cpuAndNeuralEngine
+public struct WhisperTuning: Equatable, @unchecked Sendable {
+    public var melCompute: MLComputeUnits = .cpuAndGPU
+    public var encoderCompute: MLComputeUnits = .cpuAndNeuralEngine
+    public var decoderCompute: MLComputeUnits = .cpuAndNeuralEngine
     /// Ask for text only when the audio fits one window. Dictation never
     /// uses segment timestamps.
-    package var withoutTimestamps = false
+    public var withoutTimestamps = false
     /// Cut leading and trailing silence before transcription.
-    package var trimSilence = false
+    public var trimSilence = false
     /// Seconds of silence put before the audio after the trim, so speech
     /// never starts at the model's first sample (#53).
-    package var leadPadding: Double = 0
+    public var leadPadding: Double = 0
     /// Seconds of silence put after the audio after the trim.
-    package var trailPadding: Double = 0
+    public var trailPadding: Double = 0
 
     /// WhisperKit's defaults, as Parrot ran before #49.
-    package static let baseline = WhisperTuning()
+    public static let baseline = WhisperTuning()
 
-    package static let standard = WhisperTuning(
+    public static let standard = WhisperTuning(
         melCompute: .cpuOnly,
         withoutTimestamps: true,
         trimSilence: true,

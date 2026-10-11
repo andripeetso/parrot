@@ -5,22 +5,22 @@ import Foundation
 /// as the vocabulary. In Automatic the language is unknown until the engine
 /// hears it, so every example sentence goes along and the engine picks the one
 /// for the language it settled on.
-package struct DictionaryContext {
-    package let store: DictionaryStore
+public struct DictionaryContext {
+    public let store: DictionaryStore
     /// The language being spoken, when known. Without it the prompt is left
     /// to the engine, from `examples`.
-    package let language: String?
+    public let language: String?
     /// The example sentences, by language code, from `settings.json`
     /// (`dictionary.examples`).
-    package let examples: [String: String]
+    public let examples: [String: String]
 
-    package init(store: DictionaryStore, language: String?, examples: [String: String] = [:]) {
+    public init(store: DictionaryStore, language: String?, examples: [String: String] = [:]) {
         self.store = store
         self.language = language
         self.examples = examples
     }
 
-    package func context() -> TranscriptionContext {
+    public func context() -> TranscriptionContext {
         TranscriptionContext(
             language: language,
             prompt: UserDictionary(examples: examples).example(for: language),
@@ -32,7 +32,7 @@ package struct DictionaryContext {
     /// The example sentences saved in `settings.json`, read directly for
     /// tools that run without a `SettingsStore` (which is `@MainActor`), such
     /// as `parrot-bench`. Empty when the file is missing or doesn't parse.
-    package static func savedExamples() -> [String: String] {
+    public static func savedExamples() -> [String: String] {
         savedExamples(in: Paths.settingsFile)
     }
 
@@ -62,7 +62,7 @@ package struct DictionaryContext {
     /// multilingual models, whose language comes from the Language setting or
     /// detection: an example sentence in the wrong language drags the decoder
     /// into it (#23).
-    package static func knownLanguage(of model: TranscriptionModel) -> String? {
+    public static func knownLanguage(of model: TranscriptionModel) -> String? {
         guard model.languages.count == 1, let only = model.languages.first, only != "multi" else { return nil }
         return only
     }
@@ -70,7 +70,7 @@ package struct DictionaryContext {
     /// The language `model` will be told to expect: its only language, or
     /// the Language setting `setting` if the model supports it. Nil for
     /// Automatic.
-    package static func language(of model: TranscriptionModel, setting: String?) -> String? {
+    public static func language(of model: TranscriptionModel, setting: String?) -> String? {
         if let only = knownLanguage(of: model) { return only }
         if let code = setting?.lowercased(), model.isMultilingual, model.supportedLanguages.contains(code) { return code }
         return nil

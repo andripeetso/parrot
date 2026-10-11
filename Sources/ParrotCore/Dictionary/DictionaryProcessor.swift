@@ -3,14 +3,14 @@ import Foundation
 /// The dictionary's replacement pass, run on every transcript whatever the
 /// engine. Reads the current dictionary from the store, so an edit applies to
 /// the next dictation.
-package struct DictionaryProcessor: TranscriptProcessor {
-    package let store: DictionaryStore
+public struct DictionaryProcessor: TranscriptProcessor {
+    public let store: DictionaryStore
 
-    package init(store: DictionaryStore) {
+    public init(store: DictionaryStore) {
         self.store = store
     }
 
-    package func process(_ transcript: Transcript) -> Transcript {
+    public func process(_ transcript: Transcript) -> Transcript {
         Transcript(text: store.current().replacer.apply(to: transcript.text))
     }
 }

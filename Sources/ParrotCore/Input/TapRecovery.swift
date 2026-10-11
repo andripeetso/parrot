@@ -2,7 +2,7 @@ import Foundation
 
 /// Whether the hotkey tap is receiving events. Shown in the menu bar when it
 /// is not.
-package enum HotkeyHealth: Equatable {
+public enum HotkeyHealth: Equatable {
     case ok
     /// Re-enabling keeps failing while Secure Input is on (a password field,
     /// or Terminal's Secure Keyboard Entry).
@@ -17,7 +17,7 @@ package enum HotkeyHealth: Equatable {
     case modelFailed
 
     /// The menu bar status line for a degraded tap, or nil when healthy.
-    package var statusText: String? {
+    public var statusText: String? {
         switch self {
         case .ok: return nil
         case .secureInputActive: return "hotkey unavailable, secure input active"
@@ -28,7 +28,7 @@ package enum HotkeyHealth: Equatable {
         }
     }
 
-    package static func degraded(secureInput: Bool) -> HotkeyHealth {
+    public static func degraded(secureInput: Bool) -> HotkeyHealth {
         secureInput ? .secureInputActive : .tapDisabled
     }
 }

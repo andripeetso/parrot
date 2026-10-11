@@ -21,8 +21,8 @@ import Foundation
 ///
 /// Everything here runs on the main thread: the tap's run loop source, the
 /// watchdog and the retries are all on the main run loop.
-package final class HotkeyMonitor {
-    package enum Event: Equatable {
+public final class HotkeyMonitor {
+    public enum Event: Equatable {
         /// Start recording.
         case pressed
         /// Stop recording and transcribe.
@@ -30,13 +30,13 @@ package final class HotkeyMonitor {
         /// Stop recording and discard it: a short tap, a chord, or a key switch.
         case cancelled
     }
-    package enum HotkeyError: Error { case tapCreateFailed }
+    public enum HotkeyError: Error { case tapCreateFailed }
 
     /// How often the watchdog checks that the tap is still enabled.
     package static let watchdogInterval: TimeInterval = 5
 
     /// The modifier held to dictate. Change it with `setKey(_:)`.
-    package private(set) var key: HotkeyKey
+    public private(set) var key: HotkeyKey
     private let debug: Bool
     private var onEvent: ((Event) -> Void)?
     private var tap: CFMachPort?
@@ -48,28 +48,28 @@ package final class HotkeyMonitor {
     private var watchdog: Timer?
 
     /// Called on the main thread when the tap's health changes.
-    package var onHealthChange: ((HotkeyHealth) -> Void)?
-    package private(set) var health: HotkeyHealth = .ok {
+    public var onHealthChange: ((HotkeyHealth) -> Void)?
+    public private(set) var health: HotkeyHealth = .ok {
         didSet {
             if health != oldValue { onHealthChange?(health) }
         }
     }
 
-    package init(key: HotkeyKey = .fn, debug: Bool = false) {
+    public init(key: HotkeyKey = .fn, debug: Bool = false) {
         self.key = key
         self.debug = debug
     }
 
     /// Switch to another key without recreating the tap; the next press of
     /// `newKey` records. A recording in progress on the old key is cancelled.
-    package func setKey(_ newKey: HotkeyKey) {
+    public func setKey(_ newKey: HotkeyKey) {
         guard newKey != key else { return }
         let action = gesture.reset()
         key = newKey
         if let action { emit(action) }
     }
 
-    package func start(onEvent: @escaping (Event) -> Void) throws {
+    public func start(onEvent: @escaping (Event) -> Void) throws {
         self.onEvent = onEvent
 
         // The caller waits for the grant before starting (Daemon.startHotkey);
@@ -116,7 +116,7 @@ package final class HotkeyMonitor {
         self.watchdog = watchdog
     }
 
-    package func stop() {
+    public func stop() {
         watchdog?.invalidate()
         watchdog = nil
         pendingRetry?.cancel()

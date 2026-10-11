@@ -1,19 +1,19 @@
 import Foundation
 
-package enum Engine: String, Codable {
+public enum Engine: String, Codable {
     case whisperKit
     case parakeet
 }
 
-package struct TranscriptionModel: Codable {
-    package let id: String
-    package let displayName: String
-    package let engine: Engine
+public struct TranscriptionModel: Codable {
+    public let id: String
+    public let displayName: String
+    public let engine: Engine
     /// Engine-specific identifier (e.g. "openai_whisper-base.en" for WhisperKit).
-    package let whisperKitID: String?
-    package let sizeMB: Int
-    package let languages: [String]
-    package let recommended: Bool
+    public let whisperKitID: String?
+    public let sizeMB: Int
+    public let languages: [String]
+    public let recommended: Bool
 }
 
 package struct ModelsManifest: Codable {

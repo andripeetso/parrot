@@ -3,10 +3,10 @@ import Foundation
 /// Where parrot keeps files on disk. User-authored config lives in
 /// ~/.config/parrot; everything else lives under ~/Library. Never /tmp or
 /// ~/Documents. Directories are owner-only (0700).
-package enum Paths {
+public enum Paths {
     /// `$XDG_CONFIG_HOME/parrot`, default `~/.config/parrot` — the files a user
     /// edits and may keep in dotfiles: settings and the dictionary.
-    package static var config: URL {
+    public static var config: URL {
         if let xdg = ProcessInfo.processInfo.environment["XDG_CONFIG_HOME"], xdg.hasPrefix("/") {
             return URL(fileURLWithPath: xdg, isDirectory: true).appendingPathComponent("parrot", isDirectory: true)
         }
@@ -17,7 +17,7 @@ package enum Paths {
     /// `~/Library/Application Support/parrot` — model weights and tokenizers.
     /// Not Caches: the system purges that under disk pressure, which would
     /// mean a surprise multi-GB download.
-    package static var appSupport: URL { library("Application Support/parrot") }
+    public static var appSupport: URL { library("Application Support/parrot") }
 
     /// `~/Library/Logs/parrot` — the app's stdout/stderr.
     package static var logs: URL { library("Logs/parrot") }
@@ -26,11 +26,11 @@ package enum Paths {
     package static var caches: URL { library("Caches/parrot") }
 
     /// `settings.json` in `config`: preferences, read and written by `SettingsStore`.
-    package static var settingsFile: URL { config.appendingPathComponent("settings.json") }
+    public static var settingsFile: URL { config.appendingPathComponent("settings.json") }
 
     /// `dictionary` in `config`: the user's words and what each replaces, a
     /// plain-text table. No extension, so it reads as a name, not a format.
-    package static var dictionaryFile: URL { config.appendingPathComponent("dictionary") }
+    public static var dictionaryFile: URL { config.appendingPathComponent("dictionary") }
 
     /// `dictionary.json` in `config`: the old format, converted once at
     /// startup by `DictionaryMigration`.

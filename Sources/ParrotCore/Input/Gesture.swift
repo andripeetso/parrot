@@ -12,11 +12,11 @@ import Foundation
 ///
 /// Recording still starts on key-down, so press latency is unchanged; a
 /// discarded hold just throws its audio away.
-package struct Gesture {
+public struct Gesture {
     /// Holds shorter than this are taps or shortcuts, not dictation.
-    package static let minimumHold: TimeInterval = 0.3
+    public static let minimumHold: TimeInterval = 0.3
 
-    package enum Input: Equatable {
+    public enum Input: Equatable {
         /// The hotkey went down. `othersHeld`: another modifier was already
         /// down, so this is a chord.
         case hotkeyDown(othersHeld: Bool)
@@ -26,7 +26,7 @@ package struct Gesture {
         case otherModifier
     }
 
-    package enum Action: Equatable {
+    public enum Action: Equatable {
         /// Start recording.
         case start
         /// Stop recording and transcribe.
@@ -45,11 +45,13 @@ package struct Gesture {
 
     private var phase: Phase = .idle
 
+    public init() {}
+
     /// Whether the hotkey is down, as far as the edges seen so far say.
-    package var isHeld: Bool { phase != .idle }
+    public var isHeld: Bool { phase != .idle }
 
     /// Feed one edge at `time` (seconds on a monotonic clock).
-    package mutating func handle(_ input: Input, at time: TimeInterval) -> Action? {
+    public mutating func handle(_ input: Input, at time: TimeInterval) -> Action? {
         switch (phase, input) {
         case (.idle, .hotkeyDown(let othersHeld)):
             if othersHeld {
@@ -76,7 +78,7 @@ package struct Gesture {
 
     /// Forget the current hold, for a switch to another key. A recording in
     /// progress is cancelled.
-    package mutating func reset() -> Action? {
+    public mutating func reset() -> Action? {
         defer { phase = .idle }
         if case .recording = phase { return .cancel }
         return nil

@@ -2,15 +2,15 @@ import CoreML
 import Foundation
 import WhisperKit
 
-package actor WhisperKitTranscriber: Transcriber {
-    package let modelID: String
+public actor WhisperKitTranscriber: Transcriber {
+    public let modelID: String
     private let model: TranscriptionModel
-    package let tuning: WhisperTuning
+    public let tuning: WhisperTuning
     private var pipeline: WhisperKit?
     /// Set by `unload`: this transcriber was replaced and loads nothing more.
     private var retired = false
 
-    package init(model: TranscriptionModel, tuning: WhisperTuning = .standard) {
+    public init(model: TranscriptionModel, tuning: WhisperTuning = .standard) {
         self.modelID = model.id
         self.model = model
         self.tuning = tuning
@@ -20,7 +20,7 @@ package actor WhisperKitTranscriber: Transcriber {
     /// Call once at startup so the first hotkey press isn't blocked on model
     /// download/load. `progress` gets the download's fraction done, 0 to 1,
     /// when there is anything to download.
-    package func warmUp(progress: (@Sendable (Double) -> Void)? = nil) async throws {
+    public func warmUp(progress: (@Sendable (Double) -> Void)? = nil) async throws {
         if pipeline != nil || retired { return }
         guard let whisperKitID = model.whisperKitID else {
             throw TranscriberError.missingEngineID
@@ -62,7 +62,7 @@ package actor WhisperKitTranscriber: Transcriber {
 
     /// Frees the model after a swap to another one (#43). A load still running
     /// finishes and is dropped, and a later `warmUp` returns at once.
-    package func unload() async {
+    public func unload() async {
         retired = true
         guard let pipeline else { return }
         self.pipeline = nil
@@ -74,7 +74,7 @@ package actor WhisperKitTranscriber: Transcriber {
     /// see `SpokenLanguage`. `context.vocabulary` is ignored: Whisper takes no
     /// word list, and a list given as a prompt scores no better than nothing
     /// (#23).
-    package func transcribe(_ audio: [Float], context: TranscriptionContext) async throws -> Transcript {
+    public func transcribe(_ audio: [Float], context: TranscriptionContext) async throws -> Transcript {
         if pipeline == nil { try await warmUp() }
         guard let pipeline else { throw TranscriberError.notLoaded }
 

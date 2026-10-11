@@ -6,31 +6,31 @@ import Foundation
 /// The stages add up to `total`: whatever the engine does not attribute to
 /// preprocessing, language detection, the encoder or the decoder is
 /// `postprocessing`.
-package struct TranscriberTimings: Equatable, Sendable {
+public struct TranscriberTimings: Equatable, Sendable {
     /// No time spent, for a transcription the engine did not time.
-    package static let zero = TranscriberTimings()
+    public static let zero = TranscriberTimings()
 
     /// Seconds of audio handed to the model, after any trimming.
-    package var audioSeconds: TimeInterval = 0
+    public var audioSeconds: TimeInterval = 0
     /// Silence trimming, padding the window, and the log-mel spectrogram.
-    package var preprocessing: TimeInterval = 0
+    public var preprocessing: TimeInterval = 0
     /// Detecting the spoken language before decoding (Automatic, #43): its
     /// own mel spectrogram and encoder pass, and one decoder step.
-    package var languageDetection: TimeInterval = 0
+    public var languageDetection: TimeInterval = 0
     /// The audio encoder, over every 30 s window.
-    package var encoder: TimeInterval = 0
+    public var encoder: TimeInterval = 0
     /// Decoder setup, the prompt, the token loop, and any temperature fallbacks.
-    package var decoder: TimeInterval = 0
+    public var decoder: TimeInterval = 0
     /// Segmenting, detokenizing and cleaning up the text.
-    package var postprocessing: TimeInterval = 0
+    public var postprocessing: TimeInterval = 0
     /// The whole `transcribe` call, wall clock.
-    package var total: TimeInterval = 0
+    public var total: TimeInterval = 0
     /// The language decoded in, as a code (#43), or nil when unknown.
-    package var language: String?
+    public var language: String?
     /// 30 s windows encoded.
-    package var windows = 0
+    public var windows = 0
     /// Decoder steps, prompt included.
-    package var tokens = 0
+    public var tokens = 0
     /// Temperature fallbacks: decodes thrown away and retried.
-    package var fallbacks = 0
+    public var fallbacks = 0
 }

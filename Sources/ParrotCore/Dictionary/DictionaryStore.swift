@@ -13,9 +13,9 @@ import Foundation
 /// target to be a regular file owned by the current user. It never changes the
 /// directory's permissions (`Paths.prepareDirectory` refuses symlinks, which is
 /// right for logs and wrong here).
-package final class DictionaryStore: @unchecked Sendable {
+public final class DictionaryStore: @unchecked Sendable {
     /// A dictionary with its compiled replacement pass.
-    package struct Loaded {
+    public struct Loaded {
         package let dictionary: UserDictionary
         package let replacer: DictionaryReplacer
 
@@ -28,7 +28,7 @@ package final class DictionaryStore: @unchecked Sendable {
     /// Larger than any hand-written dictionary; refuses anything absurd.
     package static let maxBytes = 1 << 20
 
-    package let file: URL
+    public let file: URL
     private let log: (String) -> Void
     private let lock = NSLock()
     private var loaded = Loaded(.empty)
@@ -36,14 +36,14 @@ package final class DictionaryStore: @unchecked Sendable {
     /// read nor logged again.
     private var seen: Stamp?
 
-    package init(file: URL = Paths.dictionaryFile, log: @escaping (String) -> Void = { Log.warning($0) }) {
+    public init(file: URL = Paths.dictionaryFile, log: @escaping (String) -> Void = { Log.warning($0) }) {
         self.file = file
         self.log = log
     }
 
     /// The dictionary to use for this dictation, reloaded first if the file
     /// changed.
-    package func current() -> Loaded {
+    public func current() -> Loaded {
         lock.lock()
         defer { lock.unlock() }
         refresh()
