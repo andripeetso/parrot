@@ -2,14 +2,14 @@ import Foundation
 
 /// A transcript that was not inserted at the cursor, with the line the
 /// overlay shows.
-package enum DeliveryError: UserFacingError, Equatable {
+public enum DeliveryError: UserFacingError, Equatable {
     /// A password field had focus at start or at delivery. Nothing was typed
     /// or copied.
     case secureField
     /// Focus moved during the dictation. The transcript is on the clipboard.
     case focusChanged
 
-    package var userMessage: String {
+    public var userMessage: String {
         switch self {
         case .secureField: return "password field, transcript discarded"
         case .focusChanged: return "focus changed, transcript copied"
@@ -40,15 +40,15 @@ package enum DeliveryDecision: Equatable {
 /// injected transcript gets a trailing space, and a leading one when the
 /// text before the cursor needs it (`Spacing`).
 @MainActor
-package final class CursorDelivery: TranscriptDelivery {
+public final class CursorDelivery: TranscriptDelivery {
     private let injector: TextInjector
 
-    package init(mode: InjectMode = .paste) {
+    public init(mode: InjectMode = .paste) {
         self.injector = TextInjector(mode: mode)
     }
 
     /// Throws `DeliveryError` when the transcript did not reach the cursor.
-    package func deliver(_ text: String, focusAtStart: FocusSnapshot?) async throws {
+    public func deliver(_ text: String, focusAtStart: FocusSnapshot?) async throws {
         guard !text.isEmpty else { return }
         let now = FocusSnapshot.capture()
         switch DeliveryDecision.decide(start: focusAtStart, now: now) {

@@ -6,7 +6,7 @@
 /// conforms to `UserFacingError` carries the line to show. Returning reports
 /// `dictationFinished`. Async, so a delivery can be a network or socket send.
 @MainActor
-package protocol TranscriptDelivery: AnyObject {
+public protocol TranscriptDelivery: AnyObject {
     /// `focusAtStart` is what had focus when the recording started, or nil
     /// when no start was seen.
     func deliver(_ text: String, focusAtStart: FocusSnapshot?) async throws

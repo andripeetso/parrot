@@ -7,7 +7,7 @@ import Foundation
 ///
 /// Taken at recording start and again right before delivery, over
 /// Accessibility, so delivery needs no watch on keystrokes or clicks.
-package struct FocusSnapshot {
+public struct FocusSnapshot {
     /// The frontmost app, if any.
     package var pid: pid_t?
     /// The focused element, if the app exposes one over Accessibility.
@@ -20,7 +20,7 @@ package struct FocusSnapshot {
     private static let messagingTimeout: Float = 0.25
 
     @MainActor
-    package static func capture() -> FocusSnapshot {
+    public static func capture() -> FocusSnapshot {
         let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier
         let systemWide = AXUIElementCreateSystemWide()
         // On the system-wide element, this sets the timeout for every element.

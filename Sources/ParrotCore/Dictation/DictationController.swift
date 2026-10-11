@@ -18,14 +18,14 @@ import Foundation
 /// - A transcript that does not reach the cursor (a secure field, or focus
 ///   moved since the press) fails with its `DeliveryError`.
 @MainActor
-package final class DictationController {
-    package enum State: Equatable {
+public final class DictationController {
+    public enum State: Equatable {
         case idle
         case recording
         case transcribing
     }
 
-    package private(set) var state: State = .idle
+    public private(set) var state: State = .idle
 
     private let capture: AudioCapture
     /// Replaced by `replaceTranscriber` when the model changes (#43).
@@ -43,12 +43,35 @@ package final class DictationController {
     /// What had focus when the current recording started (#38).
     private var focusAtStart: FocusSnapshot?
 
+    /// The loop over `capture` and `transcriber`, running `processors` in
+    /// order and handing the result to `delivery`. `context` is asked once
+    /// per release.
+    public convenience init(
+        capture: AudioCapture,
+        transcriber: Transcriber,
+        processors: [TranscriptProcessor] = [],
+        observers: [DictationObserver],
+        delivery: TranscriptDelivery,
+        context: @escaping @MainActor () -> TranscriptionContext = { TranscriptionContext() }
+    ) {
+        self.init(
+            capture: capture,
+            transcriber: transcriber,
+            processors: processors,
+            observers: observers,
+            dumpWav: false,
+            delivery: delivery,
+            context: context
+        )
+    }
+
+    /// `dumpWav` writes each capture to `Paths.dumpWav` (`--dump-wav`).
     package init(
         capture: AudioCapture,
         transcriber: Transcriber,
         processors: [TranscriptProcessor] = [],
         observers: [DictationObserver],
-        dumpWav: Bool = false,
+        dumpWav: Bool,
         delivery: TranscriptDelivery,
         context: @escaping @MainActor () -> TranscriptionContext = { TranscriptionContext() }
     ) {
@@ -63,11 +86,11 @@ package final class DictationController {
 
     /// Uses `transcriber` from the next release on. A transcription already
     /// running finishes with the one it started with.
-    package func replaceTranscriber(_ transcriber: Transcriber) {
+    public func replaceTranscriber(_ transcriber: Transcriber) {
         self.transcriber = transcriber
     }
 
-    package func handle(_ event: HotkeyMonitor.Event) {
+    public func handle(_ event: HotkeyMonitor.Event) {
         switch event {
         case .pressed: press()
         case .released: release()
