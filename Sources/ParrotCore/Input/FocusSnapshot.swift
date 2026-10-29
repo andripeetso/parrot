@@ -35,16 +35,6 @@ struct FocusSnapshot {
         return FocusSnapshot(pid: pid, element: FocusedElement(element), isSecure: isSecure(element))
     }
 
-    /// Whether focus moved from `self` to `now`. The app must match. The
-    /// element must match when both snapshots saw one; an element seen only
-    /// once is not a change, because Chromium and Electron apps build their
-    /// Accessibility tree lazily and may expose nothing at recording start.
-    func hasChanged(to now: FocusSnapshot) -> Bool {
-        if pid != now.pid { return true }
-        if let element, let other = now.element, element != other { return true }
-        return false
-    }
-
     /// Secure only when the element says so. An element that cannot be read
     /// is not treated as secure, or every app without Accessibility support
     /// would lose its dictation.

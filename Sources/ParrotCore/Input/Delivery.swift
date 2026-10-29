@@ -6,13 +6,10 @@ enum DeliveryError: UserFacingError, Equatable {
     /// A password field had focus at start or at delivery. Nothing was typed
     /// or copied.
     case secureField
-    /// Focus moved during the dictation. The transcript is on the clipboard.
-    case focusChanged
 
     var userMessage: String {
         switch self {
         case .secureField: return "password field, transcript discarded"
-        case .focusChanged: return "focus changed, transcript copied"
         }
     }
 }
@@ -23,20 +20,18 @@ enum DeliveryDecision: Equatable {
     case inject
     /// A secure field had focus at start or at delivery: drop the transcript.
     case discardSecure
-    /// Focus moved: leave the transcript on the clipboard instead.
-    case copyToClipboard
 
-    /// `start` is nil when no recording start was seen; then only the
-    /// secure-field check applies.
+    /// Goes wherever focus is at delivery, even if it moved during the
+    /// dictation: clicking around while talking and back before stopping is
+    /// normal. `start` is nil when no recording start was seen.
     static func decide(start: FocusSnapshot?, now: FocusSnapshot) -> DeliveryDecision {
         if start?.isSecure == true || now.isSecure { return .discardSecure }
-        if let start, start.hasChanged(to: now) { return .copyToClipboard }
         return .inject
     }
 }
 
-/// The delivery step of the dictation loop: checks focus against the
-/// snapshot from recording start, then injects, copies or discards. An
+/// The delivery step of the dictation loop: checks for a password field at
+/// recording start and now, then injects or discards. An
 /// injected transcript gets a trailing space, and a leading one when the
 /// text before the cursor needs it (`Spacing`).
 @MainActor
@@ -62,10 +57,6 @@ final class TextDelivery {
             let when = focusAtStart?.isSecure == true ? "recording start" : "delivery"
             Log.info("  secure field focused at \(when); transcript discarded")
             throw DeliveryError.secureField
-        case .copyToClipboard:
-            injector.copyToClipboard(text)
-            Log.info("  focus changed during dictation; transcript copied to clipboard")
-            throw DeliveryError.focusChanged
         }
     }
 }

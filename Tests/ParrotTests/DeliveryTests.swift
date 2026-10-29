@@ -28,21 +28,10 @@ final class DeliveryTests: XCTestCase {
         XCTAssertEqual(DeliveryDecision.decide(start: focus(pid: 1), now: focus(pid: 2, secure: true)), .discardSecure)
     }
 
-    func testAppSwitchCopiesToClipboard() {
-        XCTAssertEqual(DeliveryDecision.decide(start: focus(pid: 1), now: focus(pid: 2)), .copyToClipboard)
-        XCTAssertEqual(DeliveryDecision.decide(start: focus(pid: 1), now: focus(pid: nil)), .copyToClipboard)
-    }
-
-    func testElementChangeInSameAppCopiesToClipboard() {
-        let start = focus(element: element(1))
-        XCTAssertEqual(DeliveryDecision.decide(start: start, now: focus(element: element(2))), .copyToClipboard)
-    }
-
-    /// Electron builds its Accessibility tree lazily, so an element seen at
-    /// only one end is not drift.
-    func testElementSeenOnlyOnceIsNotDrift() {
-        XCTAssertEqual(DeliveryDecision.decide(start: focus(), now: focus(element: element(1))), .inject)
-        XCTAssertEqual(DeliveryDecision.decide(start: focus(element: element(1)), now: focus()), .inject)
+    /// Clicking around while talking: the text goes where focus is at the end.
+    func testMovedFocusStillInjects() {
+        XCTAssertEqual(DeliveryDecision.decide(start: focus(pid: 1), now: focus(pid: 2)), .inject)
+        XCTAssertEqual(DeliveryDecision.decide(start: focus(element: element(1)), now: focus(element: element(2))), .inject)
     }
 
     func testNoStartSnapshotInjects() {
@@ -51,7 +40,6 @@ final class DeliveryTests: XCTestCase {
 
     func testUserMessagesNeverCarryText() {
         XCTAssertEqual(DeliveryError.secureField.userMessage, "password field, transcript discarded")
-        XCTAssertEqual(DeliveryError.focusChanged.userMessage, "focus changed, transcript copied")
     }
 }
 

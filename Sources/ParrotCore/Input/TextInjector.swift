@@ -64,12 +64,6 @@ final class TextInjector {
         }
     }
 
-    /// Leaves `text` on the clipboard for the user to paste.
-    func copyToClipboard(_ text: String) {
-        guard !text.isEmpty else { return }
-        clipboard.copy(text)
-    }
-
     private static func postCommandV() {
         let source = CGEventSource(stateID: .privateState)
         guard
