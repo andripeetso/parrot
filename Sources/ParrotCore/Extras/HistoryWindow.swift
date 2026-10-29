@@ -23,6 +23,7 @@ enum HistoryWindow {
         if let wav { model.retry(wav) }
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
+        window?.orderFrontRegardless()  // a shortcut can't activate an accessory app on macOS 14+
     }
 
     /// The History key: open History, or close it if it's already in front.

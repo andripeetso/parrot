@@ -20,6 +20,7 @@ enum DropBox {
         }
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
+        window?.orderFrontRegardless()  // a shortcut can't activate an accessory app on macOS 14+
     }
 
     static func toggle() {
