@@ -9,7 +9,7 @@ import AppKit
 /// rather than rebuilding the menu.
 @MainActor
 final class MenuBarController {
-    private static func readyStatus(_ key: HotkeyKey) -> String { "idle · hold \(key.shortName) to dictate" }
+    private static func readyStatus(_ key: HotkeyKey) -> String { "idle · \(key.usageHint)" }
 
     private let statusItem: NSStatusItem
     /// Slot: what the dictation loop is doing. Driven as a `DictationObserver`.
@@ -30,6 +30,10 @@ final class MenuBarController {
     let checkForUpdatesItem: NSMenuItem
     /// Slot: quits parrot.
     let quitItem: NSMenuItem
+    /// Slots: the History window, the last dictations, and the file drop box.
+    let historyItem: NSMenuItem
+    private let recentMenu = NSMenu()
+    let transcribeFileItem: NSMenuItem
 
     /// A degraded hotkey tap replaces the idle line, so the menu bar does not
     /// claim fn works when it does not (#37).
@@ -63,6 +67,16 @@ final class MenuBarController {
 
         menu.addItem(.separator())
 
+        historyItem = NSMenuItem(title: "History…", action: #selector(historyClicked), keyEquivalent: "")
+        menu.addItem(historyItem)
+        let recentItem = NSMenuItem(title: "Recent", action: nil, keyEquivalent: "")
+        recentItem.submenu = recentMenu
+        menu.addItem(recentItem)
+        transcribeFileItem = NSMenuItem(title: "Transcribe file…", action: #selector(transcribeFileClicked), keyEquivalent: "")
+        menu.addItem(transcribeFileItem)
+
+        menu.addItem(.separator())
+
         settingsItem = NSMenuItem(title: "Settings…", action: #selector(settingsClicked), keyEquivalent: ",")
         menu.addItem(settingsItem)
 
@@ -86,7 +100,49 @@ final class MenuBarController {
         settingsItem.target = self
         checkForUpdatesItem.target = self
         grantPermissionsItem.target = self
+        historyItem.target = self
+        transcribeFileItem.target = self
         configureButton()
+        rebuildRecent()
+        NotificationCenter.default.addObserver(forName: Recordings.changed, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.rebuildRecent() }
+        }
+    }
+
+    /// Shows the History and file-drop keys after their menu titles.
+    func setShortcutKeys(history: FunctionKey, fileDrop: FunctionKey) {
+        historyItem.title = "History…" + history.menuSuffix
+        transcribeFileItem.title = "Transcribe file…" + fileDrop.menuSuffix
+    }
+
+    private func rebuildRecent() {
+        recentMenu.removeAllItems()
+        let recordings = Recordings.recent()
+        if recordings.isEmpty {
+            let empty = NSMenuItem(title: "No recordings yet", action: nil, keyEquivalent: "")
+            empty.isEnabled = false
+            recentMenu.addItem(empty)
+        }
+        for (wav, text) in recordings {
+            // Filenames are yyyy-MM-dd_HH-mm-ss; show HH:mm.
+            let time = wav.deletingPathExtension().lastPathComponent.suffix(8).prefix(5).replacingOccurrences(of: "-", with: ":")
+            let item: NSMenuItem
+            if let text {
+                let preview = text.isEmpty ? "(no speech)" : (text.count > 60 ? text.prefix(60) + "…" : text)
+                item = NSMenuItem(title: "\(time) · \(preview)", action: #selector(copyRecent(_:)), keyEquivalent: "")
+                item.representedObject = text
+                item.toolTip = text
+            } else {
+                item = NSMenuItem(title: "\(time) · ⚠ no transcript, click to transcribe", action: #selector(retryRecent(_:)), keyEquivalent: "")
+                item.representedObject = wav
+            }
+            item.target = self
+            recentMenu.addItem(item)
+        }
+        recentMenu.addItem(.separator())
+        let open = NSMenuItem(title: "Open History…", action: #selector(historyClicked), keyEquivalent: "")
+        open.target = self
+        recentMenu.addItem(open)
     }
 
     func setStatus(_ text: String) {
@@ -148,6 +204,25 @@ final class MenuBarController {
 
     @objc private func checkForUpdatesClicked() {
         Updater.checkForUpdates()
+    }
+
+    @objc private func historyClicked() {
+        HistoryWindow.show()
+    }
+
+    @objc private func transcribeFileClicked() {
+        DropBox.show()
+    }
+
+    @objc private func copyRecent(_ sender: NSMenuItem) {
+        guard let text = sender.representedObject as? String else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+    }
+
+    @objc private func retryRecent(_ sender: NSMenuItem) {
+        guard let url = sender.representedObject as? URL else { return }
+        HistoryWindow.show(retrying: url)
     }
 
     @objc private func quitClicked() {

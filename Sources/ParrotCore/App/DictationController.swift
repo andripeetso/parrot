@@ -30,6 +30,8 @@ final class DictationController {
     private let capture: AudioCapture
     /// Replaced by `replaceTranscriber` when the model changes (#43).
     private var transcriber: Transcriber
+    /// A LAN server tried before `transcriber`; nil for on-device only.
+    var remote: RemoteTranscriber?
     private let processors: [TranscriptProcessor]
     private let observers: [DictationObserver]
     private let dumpWav: Bool
@@ -123,18 +125,22 @@ final class DictationController {
 
         inFlight += 1
         let transcriber = self.transcriber
+        let remote = self.remote
         let context = self.context()
+        // On disk before transcription, so a failure can be retried from History.
+        let saved = Recordings.save(samples)
         Task {
             let started = CFAbsoluteTimeGetCurrent()
             do {
                 // The transcriber is an actor; this await runs off the main actor.
-                let raw = try await transcriber.transcribe(samples, context: context)
+                let raw = try await Self.transcribe(samples, context: context, local: transcriber, remote: remote)
                 let transcribed = CFAbsoluteTimeGetCurrent()
                 let elapsed = transcribed - started
                 // Never log the transcript itself: the agent's log is a file on disk.
                 Log.info(String(format: "→ %.2fs · %d chars", elapsed, raw.text.count))
                 let transcript = processors.reduce(raw) { $1.process($0) }
                 let processed = CFAbsoluteTimeGetCurrent()
+                if let saved { Recordings.saveTranscript(transcript.text, for: saved) }
                 let delivered = Result { try delivery.deliver(transcript.text, focusAtStart: focus) }
                 let done = CFAbsoluteTimeGetCurrent()
                 inFlight -= 1
@@ -159,9 +165,37 @@ final class DictationController {
                 Log.error("transcription failed: \(error)")
                 inFlight -= 1
                 settle()
-                observers.forEach { $0.dictationFailed(error) }
+                let failure = TranscriptionFailed(underlying: error, saved: saved)
+                observers.forEach { $0.dictationFailed(failure) }
             }
         }
+    }
+
+    /// The server first when there is one, then the on-device model, which
+    /// gets one more try before the dictation fails.
+    private static func transcribe(
+        _ samples: [Float], context: TranscriptionContext, local: Transcriber, remote: RemoteTranscriber?
+    ) async throws -> Transcript {
+        if let remote {
+            do {
+                return try await remote.transcribe(samples, context: context)
+            } catch {
+                Log.warning("server unavailable (\(error.localizedDescription)), using \(local.modelID)")
+            }
+        }
+        do {
+            return try await local.transcribe(samples, context: context)
+        } catch {
+            Log.error("transcription failed: \(error), retrying on-device")
+            return try await local.transcribe(samples, context: context)
+        }
+    }
+
+    /// A saved recording or a dropped file, on this Mac with the current
+    /// model and the dictionary, never sent to the server.
+    func transcribeOnDevice(_ samples: [Float]) async throws -> String {
+        let raw = try await transcriber.transcribe(samples, context: context())
+        return processors.reduce(raw) { $1.process($0) }.text
     }
 
     /// The gesture discarded this recording (a short tap, a chord, or a

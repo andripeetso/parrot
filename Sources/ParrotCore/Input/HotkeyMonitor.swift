@@ -174,6 +174,8 @@ final class HotkeyMonitor {
     ///   any event while held, which also covers a missed release.
     /// - Another modifier's keycode while held is a chord.
     static func input(keycode: Int64, flags: CGEventFlags, key: HotkeyKey, held: Bool) -> Gesture.Input? {
+        // A toggle key is not a modifier; `FunctionKeys` handles it.
+        if key.isToggle { return nil }
         let flagSet = flags.contains(key.flag)
         if held {
             if !flagSet { return .hotkeyUp }

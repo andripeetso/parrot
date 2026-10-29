@@ -30,6 +30,9 @@ public enum HotkeyKey: String, Codable, CaseIterable, Sendable {
     case rightControl = "right-control"
     case leftShift = "left-shift"
     case rightShift = "right-shift"
+    /// Not a modifier: tapped once to start and again to stop. Caught by
+    /// `FunctionKeys`, never by the modifier tap.
+    case f13
 
     /// How the key is named in the menu and the Settings window.
     var displayName: String {
@@ -43,6 +46,7 @@ public enum HotkeyKey: String, Codable, CaseIterable, Sendable {
         case .rightControl: return "Right Control (⌃)"
         case .leftShift: return "Left Shift (⇧)"
         case .rightShift: return "Right Shift (⇧)"
+        case .f13: return "F13 (tap to start/stop)"
         }
     }
 
@@ -58,6 +62,7 @@ public enum HotkeyKey: String, Codable, CaseIterable, Sendable {
         case .rightControl: return "right ⌃"
         case .leftShift: return "left ⇧"
         case .rightShift: return "right ⇧"
+        case .f13: return "F13"
         }
     }
 
@@ -74,6 +79,7 @@ public enum HotkeyKey: String, Codable, CaseIterable, Sendable {
         case .rightControl: return 62
         case .leftShift: return 56
         case .rightShift: return 60
+        case .f13: return 105
         }
     }
 
@@ -85,6 +91,15 @@ public enum HotkeyKey: String, Codable, CaseIterable, Sendable {
         case .leftCommand, .rightCommand: return .maskCommand
         case .leftControl, .rightControl: return .maskControl
         case .leftShift, .rightShift: return .maskShift
+        case .f13: return []
         }
+    }
+
+    /// Tap to start, tap again to stop, instead of holding.
+    var isToggle: Bool { self == .f13 }
+
+    /// How to dictate with this key: "hold fn to dictate".
+    var usageHint: String {
+        isToggle ? "tap \(shortName) to start/stop" : "hold \(shortName) to dictate"
     }
 }

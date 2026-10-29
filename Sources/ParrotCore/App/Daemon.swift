@@ -144,6 +144,9 @@ public enum Daemon {
         if let overlay { observers.append(overlay) }
         observers.append(menuBar)
         observers.append(LatencyLog())
+        let sounds = Sounds()
+        observers.append(sounds)
+        observers.append(FailureAlert())
         let controller = DictationController(
             capture: capture,
             transcriber: transcriber,
@@ -154,6 +157,42 @@ public enum Daemon {
             context: dictionaryContext
         )
         switcher.controller = controller
+
+        // History retries and dropped files run on this Mac, never the server.
+        HistoryWindow.model.transcribe = { url in
+            let samples = try await Task.detached { try AudioFileLoader.load(url: url) }.value
+            guard !samples.isEmpty else { throw AudioFileLoader.LoaderError.invalidFormat }
+            return try await controller.transcribeOnDevice(samples)
+        }
+        DropBox.model.transcribe = { try await controller.transcribeOnDevice($0) }
+
+        func applyExtras(_ extras: ExtrasSettings) {
+            Recordings.keep = extras.keepRecordings
+            Recordings.prune()
+            sounds.enabled = extras.sounds
+            menuBar.setShortcutKeys(history: extras.historyKey, fileDrop: extras.fileDropKey)
+            let remote = extras.serverURL.map { RemoteTranscriber(endpoint: $0) }
+            controller.remote = remote
+            if let remote {
+                Log.info("server: \(remote.endpoint.absoluteString), falling back to \(switcher.model.id)")
+                Task { await remote.warmUp() }
+            }
+        }
+        // F13 (when it is the hotkey), History and file drop.
+        func bindFunctionKeys() {
+            let extras = settings.current.extras
+            var bindings: [(keycode: UInt32, action: () -> Void)] = []
+            if monitor.key.isToggle {
+                bindings.append((UInt32(monitor.key.keycode), {
+                    controller.handle(controller.state == .recording ? .released : .pressed)
+                }))
+            }
+            if let code = extras.historyKey.keycode { bindings.append((code, { HistoryWindow.toggle() })) }
+            if let code = extras.fileDropKey.keycode { bindings.append((code, { DropBox.toggle() })) }
+            FunctionKeys.shared.bind(bindings)
+        }
+        applyExtras(settings.current.extras)
+        bindFunctionKeys()
 
         // Each setting applies itself here when it changes, from the window
         // or a hand edit of settings.json (#41). CLI flags only set the
@@ -166,11 +205,16 @@ public enum Daemon {
                     // The tap stays; it matches the new key from the next event.
                     monitor.setKey(new.hotkey.key)
                     menuBar.setHotkey(new.hotkey.key)
-                    Log.info("hotkey: \(new.hotkey.key.rawValue); hold \(new.hotkey.key.shortName) to dictate")
+                    bindFunctionKeys()
+                    Log.info("hotkey: \(new.hotkey.key.rawValue); \(new.hotkey.key.usageHint)")
                 }
             }
             if old.model != new.model {
                 switcher.select(new.model.id)
+            }
+            if old.extras != new.extras {
+                applyExtras(new.extras)
+                bindFunctionKeys()
             }
             if old.language != new.language {
                 // Read per dictation by dictionaryContext.

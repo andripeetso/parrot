@@ -78,12 +78,20 @@ final class HotkeyMatchTests: XCTestCase {
     private let leftOptionDeviceBit = CGEventFlags(rawValue: 0x20)
 
     func testKeycodesAndFlags() {
-        XCTAssertEqual(HotkeyKey.allCases.map(\.keycode), [63, 58, 61, 55, 54, 59, 62, 56, 60])
+        XCTAssertEqual(HotkeyKey.allCases.map(\.keycode), [63, 58, 61, 55, 54, 59, 62, 56, 60, 105])
         XCTAssertEqual(HotkeyKey.fn.flag, .maskSecondaryFn)
         XCTAssertEqual(HotkeyKey.rightOption.flag, .maskAlternate)
         XCTAssertEqual(HotkeyKey.leftCommand.flag, .maskCommand)
         XCTAssertEqual(HotkeyKey.rightControl.flag, .maskControl)
         XCTAssertEqual(HotkeyKey.leftShift.flag, .maskShift)
+    }
+
+    /// F13 is tapped, not held: the modifier tap never acts on it, whatever the flags.
+    func testToggleKeyIgnoredByModifierTap() {
+        XCTAssertTrue(HotkeyKey.f13.isToggle)
+        XCTAssertNil(input(105, [], .f13, held: false))
+        XCTAssertNil(input(63, .maskSecondaryFn, .f13, held: false))
+        XCTAssertNil(input(105, [], .f13, held: true))
     }
 
     func testRightOptionMatchesItsOwnSideOnly() {
