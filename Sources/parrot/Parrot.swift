@@ -7,7 +7,7 @@ import WhisperKit
 struct Parrot: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "parrot",
-        abstract: "Minimal macOS dictation daemon. Hold Fn, speak, release.",
+        abstract: "Minimal macOS dictation daemon. Hold Fn (or tap F13), speak, release.",
         subcommands: [Run.self, Setup.self, Doctor.self, Models.self, Install.self],
         defaultSubcommand: Run.self
     )
@@ -31,6 +31,9 @@ struct Run: ParsableCommand {
     @Flag(name: .long, help: "Disable the on-screen recording overlay.")
     var noOverlay: Bool = false
 
+    @Flag(name: .long, help: "Disable the start/stop recording sounds.")
+    var noSounds: Bool = false
+
     @Option(name: .long, help: "Model id to use. Defaults to the recommended model.")
     var model: String?
 
@@ -39,6 +42,12 @@ struct Run: ParsableCommand {
         help: "Push-to-talk key. Options: \(HotkeyMonitor.Hotkey.allCases.map(\.rawValue).joined(separator: ", "))."
     )
     var hotkey: HotkeyMonitor.Hotkey?
+
+    @Option(
+        name: .long,
+        help: "Speech-to-text server tried before the on-device model (POST WAV, returns {\"text\"}). Empty to disable."
+    )
+    var server: String = "http://192.168.8.237:7886/api/transcribe"
 
     func run() throws {
         let selectedHotkey = hotkey ?? HotkeyPreferences.selected
@@ -72,36 +81,57 @@ struct Run: ParsableCommand {
             chosenModel = m
         }
 
-        let transcriber = WhisperKitTranscriber(model: chosenModel)
-        let warmupSemaphore = DispatchSemaphore(value: 0)
-        var warmupError: Error?
+        let localTranscriber = WhisperKitTranscriber(model: chosenModel)
+        let remoteTranscriber = URL(string: server).flatMap { $0.host == nil ? nil : RemoteTranscriber(endpoint: $0) }
+        let transcriber = FallbackTranscriber(remote: remoteTranscriber, local: localTranscriber)
+        if let remoteTranscriber {
+            Task.detached { await remoteTranscriber.warmUp() }
+        }
+        // Load in the background so hotkeys work right away: when macOS has evicted its
+        // compiled copy of the model, recompiling takes minutes. Until it's ready,
+        // dictation uses the server, or waits for the load if the server is down.
         Task.detached {
             do {
-                try await transcriber.warmUp()
+                try await localTranscriber.warmUp()
             } catch {
-                warmupError = error
+                FileHandle.standardError.write(Data("warmup failed: \(error)\n".utf8))
             }
-            warmupSemaphore.signal()
-        }
-        warmupSemaphore.wait()
-        if let warmupError {
-            FileHandle.standardError.write(Data("warmup failed: \(warmupError)\n".utf8))
-            throw ExitCode(1)
         }
 
+        Recordings.prune()
+        Sounds.enabled = !noSounds
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
 
         let monitor = HotkeyMonitor(hotkey: selectedHotkey, debug: debugHotkey)
+        monitor.onHistoryKey = { MainActor.assumeIsolated { HistoryWindow.toggle() } }
+        monitor.onDropBoxKey = { MainActor.assumeIsolated { DropBox.toggle() } }
         let capture = AudioCapture()
         let dumpWav = self.dumpWav
         let overlay: RecordingOverlay? = noOverlay ? nil : MainActor.assumeIsolated { RecordingOverlay() }
         if let overlay {
             capture.onLevel = { level in overlay.pushLevel(level) }
         }
-        let menuBar = MainActor.assumeIsolated {
-            MenuBarController(modelID: chosenModel.id, hotkey: selectedHotkey) {
-                monitor.setHotkey($0)
+        MainActor.assumeIsolated {
+            HistoryWindow.model.transcribe = { url in
+                let samples = try await Task.detached { try AudioFileLoader.load(url: url) }.value  // off main: the key tap runs there
+                guard !samples.isEmpty else { throw AudioFileLoader.LoaderError.invalidFormat }
+                return try await localTranscriber.transcribe(samples)
+            }
+            DropBox.model.transcribe = { try await localTranscriber.transcribe($0) }
+        }
+        var menuBar: MenuBarController!
+        menuBar = MainActor.assumeIsolated {
+            MenuBarController(
+                modelID: transcriber.modelID,
+                hotkey: selectedHotkey
+            )
+        }
+
+        MainActor.assumeIsolated {
+            SettingsWindow.onDictationKeyChanged = { key in
+                monitor.setHotkey(key)
+                menuBar.setHotkey(key)
             }
         }
 
@@ -110,6 +140,7 @@ struct Run: ParsableCommand {
                 switch event {
                 case .pressed:
                     do {
+                        Sounds.playStart()
                         try capture.start()
                         FileHandle.standardError.write(Data("● recording\n".utf8))
                         MainActor.assumeIsolated {
@@ -121,6 +152,7 @@ struct Run: ParsableCommand {
                     }
                 case .released:
                     let samples = capture.stop()
+                    Sounds.playStop()
                     MainActor.assumeIsolated {
                         overlay?.show(.transcribing)
                         menuBar.setTranscribing()
@@ -147,9 +179,18 @@ struct Run: ParsableCommand {
                         return
                     }
                     Task {
+                        let saved = Recordings.save(samples)
                         let started = Date()
                         do {
-                            let text = try await transcriber.transcribe(samples)
+                            let text: String
+                            do {
+                                text = try await transcriber.transcribe(samples)
+                            } catch {
+                                // One more on-device attempt before giving up; the audio is in History either way.
+                                FileHandle.standardError.write(Data("transcription failed: \(error), retrying on-device\n".utf8))
+                                text = try await localTranscriber.transcribe(samples)
+                            }
+                            if let saved { Recordings.saveTranscript(text, for: saved) }
                             let elapsed = Date().timeIntervalSince(started)
                             FileHandle.standardError.write(Data(
                                 String(format: "→ %.2fs · %@\n", elapsed, text).utf8
@@ -164,6 +205,7 @@ struct Run: ParsableCommand {
                             await MainActor.run {
                                 overlay?.hide()
                                 menuBar.setRecording(false)
+                                TranscriptionResultPresenter.showRecordingFailed(error, saved: saved)
                             }
                         }
                     }
@@ -185,7 +227,7 @@ struct Run: ParsableCommand {
         signal(SIGINT, SIG_IGN)
 
         FileHandle.standardError.write(Data(
-            "listening on \(selectedHotkey.rawValue) hold · model: \(chosenModel.id) · ^C to quit\n".utf8
+            "listening · \(selectedHotkey.usageHint) · model: \(transcriber.modelID) · ^C to quit\n".utf8
         ))
         app.run()
     }

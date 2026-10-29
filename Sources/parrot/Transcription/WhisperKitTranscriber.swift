@@ -5,6 +5,7 @@ actor WhisperKitTranscriber: Transcriber {
     let modelID: String
     private let model: TranscriptionModel
     private var pipeline: WhisperKit?
+    private var loading: Task<WhisperKit, Error>?
 
     init(model: TranscriptionModel) {
         self.modelID = model.id
@@ -19,9 +20,18 @@ actor WhisperKitTranscriber: Transcriber {
         guard let whisperKitID = model.whisperKitID else {
             throw TranscriberError.missingEngineID
         }
-        FileHandle.standardError.write(Data("loading \(model.id)...\n".utf8))
-        let config = WhisperKitConfig(model: whisperKitID, verbose: false, prewarm: true, load: true)
-        pipeline = try await WhisperKit(config)
+        // Concurrent callers share one load instead of starting a second one.
+        if loading == nil {
+            FileHandle.standardError.write(Data("loading \(model.id)...\n".utf8))
+            let config = WhisperKitConfig(model: whisperKitID, verbose: false, prewarm: true, load: true)
+            loading = Task { try await WhisperKit(config) }
+        }
+        do {
+            pipeline = try await loading!.value
+        } catch {
+            loading = nil  // let the next call retry
+            throw error
+        }
         FileHandle.standardError.write(Data("✓ \(model.id) ready\n".utf8))
     }
 

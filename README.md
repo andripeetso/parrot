@@ -23,6 +23,11 @@ The installer drops the binary in `/usr/local/bin/parrot`. Builds are unsigned f
 
 That's it. There is no record button, no stop button, no "send" — `fn` is the whole interface.
 
+To transcribe an existing recording, click the Parrot bird in the menu bar and
+choose **Transcribe file…**. Select an audio or video file; it is decoded and
+transcribed locally with the active WhisperKit model. The result is shown in a
+copyable window and the file is never uploaded.
+
 > **Note:** on most modern Macs the `fn` key is the bottom-left key. If yours is set to "Change input source" or "Show emoji & symbols," `parrot setup` will tell you how to flip it back to plain `fn`.
 
 ## CLI
@@ -37,12 +42,21 @@ parrot models list                     # list available models
 parrot models download <id>            # pre-download a model
 parrot --model whisper-large-v3-turbo  # bigger, multilingual, slower first-run
 parrot --hotkey right-option           # change the push-to-talk key
+parrot --hotkey f13                    # tap F13 to start, tap again to stop
+parrot --server ""                     # skip the LAN server, always transcribe on-device
 parrot --no-overlay                    # disable the bottom-of-screen pill
 ```
 
 You can also change the push-to-talk key while Parrot is running: click its
 menu-bar icon, open **Push-to-talk key**, and choose a modifier. The selection
 is applied immediately and remembered for future launches.
+
+## LAN transcription server
+
+Each recording is first POSTed as a WAV to `--server` (default
+`http://192.168.8.237:7886/api/transcribe`, the Omarchy box's Parakeet service), which
+answers `{"text": "..."}`. If the server can't be reached, Parrot falls back to the
+on-device WhisperKit model. **Transcribe file…** always stays on-device.
 
 ## Stack
 
@@ -61,3 +75,8 @@ See [docs/architecture.md](docs/architecture.md) for design notes.
 swift build -c release
 .build/release/parrot --help
 ```
+
+For local development, `scripts/build.sh` builds, signs, and installs to
+`/usr/local/bin` in one step. Signing with a stable self-signed cert
+(`parrot-dev` in the login keychain) keeps macOS Accessibility/mic grants
+valid across rebuilds — ad-hoc builds re-prompt every time.

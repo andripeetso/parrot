@@ -1,39 +1,52 @@
+import AppKit
 import CoreGraphics
 import Foundation
 
-/// Posts a string of text at the current cursor location by synthesizing
-/// keyboard events with `CGEventKeyboardSetUnicodeString`. Works in nearly
-/// every text field on macOS; some Electron apps and secure password fields
-/// can drop characters (platform constraint).
+/// Inserts text at the cursor by pasting it: the text goes on the clipboard,
+/// ⌘V is synthesized, and the previous clipboard contents come back shortly
+/// after. Typing it as synthetic unicode key events dropped text in Electron
+/// apps; pasting lands in one piece everywhere a paste works.
 enum TextInjector {
-    /// Inject the given text at the current cursor location.
-    /// Splits long strings into chunks because the underlying API has a
-    /// per-event character limit (~20 chars).
+    private static let vKeycode: CGKeyCode = 9  // physical V key, any layout
+    private static let restoreDelay: TimeInterval = 0.6
+
     static func inject(_ text: String) {
         guard !text.isEmpty else { return }
+        if !CGPreflightPostEventAccess() {
+            FileHandle.standardError.write(Data(
+                "  can't post ⌘V (accessibility not granted); transcript left on the clipboard\n".utf8
+            ))
+        }
 
-        let utf16 = Array(text.utf16)
-        let chunkSize = 20
-        var index = 0
+        let pasteboard = NSPasteboard.general
+        let saved = snapshot(pasteboard)
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+        let changeCount = pasteboard.changeCount
 
-        while index < utf16.count {
-            let end = min(index + chunkSize, utf16.count)
-            var chunk = Array(utf16[index..<end])
-            postChunk(&chunk)
-            index = end
+        let source = CGEventSource(stateID: .combinedSessionState)
+        let down = CGEvent(keyboardEventSource: source, virtualKey: vKeycode, keyDown: true)
+        let up = CGEvent(keyboardEventSource: source, virtualKey: vKeycode, keyDown: false)
+        down?.flags = .maskCommand
+        up?.flags = .maskCommand
+        down?.post(tap: .cgSessionEventTap)
+        up?.post(tap: .cgSessionEventTap)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + restoreDelay) {
+            // Leave the clipboard alone if something else changed it meanwhile.
+            guard pasteboard.changeCount == changeCount, !saved.isEmpty else { return }
+            pasteboard.clearContents()
+            pasteboard.writeObjects(saved)
         }
     }
 
-    private static func postChunk(_ chunk: inout [UniChar]) {
-        let length = chunk.count
-        guard length > 0 else { return }
-
-        let down = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: true)
-        down?.keyboardSetUnicodeString(stringLength: length, unicodeString: &chunk)
-        down?.post(tap: .cgSessionEventTap)
-
-        let up = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: false)
-        up?.keyboardSetUnicodeString(stringLength: length, unicodeString: &chunk)
-        up?.post(tap: .cgSessionEventTap)
+    private static func snapshot(_ pasteboard: NSPasteboard) -> [NSPasteboardItem] {
+        (pasteboard.pasteboardItems ?? []).map { item in
+            let copy = NSPasteboardItem()
+            for type in item.types {
+                if let data = item.data(forType: type) { copy.setData(data, forType: type) }
+            }
+            return copy
+        }
     }
 }
