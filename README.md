@@ -65,3 +65,14 @@ scripts/dev-install.sh      # build, sign, install Parrot.app, link the CLI
 ## 7. License
 
 [MIT](LICENSE)
+
+## This fork's additions
+
+- **Saved recordings.** Every dictation is written to `~/Library/Application Support/parrot/recordings` before it is transcribed. If a transcription fails, open **History…** (menu bar or F14) and click **Transcribe** to run it again on this Mac. The last 10 are kept (Settings → History & Extras).
+- **Recent** in the menu bar: click a dictation to copy it.
+- **Transcribe file…** (menu bar or F15): drop audio or video files to transcribe them on this Mac.
+- **F13 tap to talk**: choose it as the hotkey; tap to start, tap again to stop.
+- **LAN transcription server** (off by default): set `extras.server` in `~/.config/parrot/settings.json`, or the field in Settings, to a URL that takes a WAV POST and answers `{"text": "..."}`. Parrot falls back to the on-device model when it can't be reached.
+- Start/stop sounds.
+
+Build and install with `scripts/build-app.sh 0.2.0-andri` and copy `build/Parrot.app` to `/Applications`. Keep a non-numeric version suffix: it switches off the updater, which would otherwise replace this build with an upstream release.
