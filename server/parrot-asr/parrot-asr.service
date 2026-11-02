@@ -1,0 +1,15 @@
+[Unit]
+Description=Parrot ASR: Parakeet speech-to-text for the Mac's Parrot dictation (LAN, port 7886)
+After=network-online.target
+
+[Service]
+WorkingDirectory=%h/ai/parrot-asr
+ExecStart=%h/ai/parrot-asr/.venv/bin/uvicorn server:app --host 0.0.0.0 --port 7886
+Restart=on-failure
+RestartSec=3
+# Dictation must win over builds/renders (desktop apps run at nice -8; ulimit -e 30 allows -10).
+Nice=-10
+CPUWeight=1000
+
+[Install]
+WantedBy=default.target
