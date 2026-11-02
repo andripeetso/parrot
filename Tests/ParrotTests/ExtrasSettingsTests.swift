@@ -12,13 +12,15 @@ final class ExtrasSettingsTests: XCTestCase {
         XCTAssertEqual(extras.keepRecordings, 10)
         XCTAssertEqual(extras.historyKey, .f14)
         XCTAssertEqual(extras.fileDropKey, .f15)
+        XCTAssertEqual(extras.cancelKey, .f16)
     }
 
     func testServerAndUnknownKey() throws {
-        let extras = try decode(#"{"extras":{"server":"http://192.168.8.237:7886/api/transcribe","historyKey":"f99","fileDropKey":"off"}}"#)
+        let extras = try decode(#"{"extras":{"server":"http://192.168.8.237:7886/api/transcribe","historyKey":"f99","fileDropKey":"off","cancelKey":"off"}}"#)
         XCTAssertEqual(extras.serverURL?.host, "192.168.8.237")
         XCTAssertEqual(extras.historyKey, .f14)
         XCTAssertNil(extras.fileDropKey.keycode)
+        XCTAssertNil(extras.cancelKey.keycode)
         XCTAssertNil(try decode(#"{"extras":{"server":"not a url"}}"#).serverURL)
     }
 }

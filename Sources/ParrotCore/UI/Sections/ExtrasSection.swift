@@ -26,6 +26,7 @@ struct ExtrasSection: View {
             }
             keyRow("History key", \.historyKey)
             keyRow("File drop key", \.fileDropKey)
+            keyRow("Cancel key", \.cancelKey)
             PillRow("Sounds") {
                 Toggle("Sounds", isOn: Binding(
                     get: { extras.sounds },

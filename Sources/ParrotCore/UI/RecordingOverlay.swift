@@ -46,6 +46,9 @@ final class RecordingOverlay {
         if state == .recording {
             model.resetLevels()
         }
+        if state != model.state {
+            model.since = Date()
+        }
 
         guard let window else { return }
         let needsAppear = !window.isVisible
@@ -175,15 +178,8 @@ final class OverlayModel: ObservableObject {
 
     @Published var state: RecordingOverlay.State = .hidden
     @Published var levels: [Float] = Array(repeating: 0, count: barCount)
-    /// Whether the current recording has been louder than silence, so a
-    /// recording with nothing said gets no loading animation.
-    @Published private(set) var heardVoice = false
-
-    /// RMS over one refresh interval above which the recording counts as
-    /// speech. Silent recordings measure about 0.001 over their whole length;
-    /// speech averages 0.007 to 0.018 and peaks well above.
-    static let voiceThreshold: Float = 0.01
-
+    /// When the current state was shown, for the seconds counter while transcribing.
+    @Published var since = Date()
     /// How often the bars move. Capture delivers a level per buffer, about
     /// every 12 ms with the AUHAL input (#52); the bars are tuned for about
     /// 100 ms and look twitchy any faster.
@@ -204,9 +200,6 @@ final class OverlayModel: ObservableObject {
         pendingPower = 0
         pendingCount = 0
         lastRefresh = now
-        if rms > Self.voiceThreshold, !heardVoice {
-            heardVoice = true
-        }
         showLevel(rms)
     }
 
@@ -225,7 +218,6 @@ final class OverlayModel: ObservableObject {
     func resetLevels() {
         pendingPower = 0
         pendingCount = 0
-        heardVoice = false
         levels = Array(repeating: 0, count: Self.barCount)
     }
 }
@@ -258,70 +250,62 @@ private struct OverlayPill: View {
     @ViewBuilder
     private var content: some View {
         switch model.state {
-        case .hidden, .recording, .transcribing:
-            // The same bars in both states, so transcribing is the recording
-            // bars taking up the loop rather than a swap to a spinner.
-            Waveform(
-                levels: model.levels,
-                transcribing: model.state == .transcribing,
-                heardVoice: model.heardVoice
-            )
-                .frame(width: 51, height: 20)
+        case .hidden, .recording:
+            // A pulsing dot and a word, so a press that started recording is
+            // obvious even before any sound moves the bars.
+            HStack(spacing: 8) {
+                Image(systemName: "circle.fill")
+                    .font(.system(size: 8))
+                    .foregroundStyle(Color(red: 1, green: 0.27, blue: 0.23))
+                    .symbolEffect(.pulse)
+                Waveform(levels: model.levels)
+                    .frame(width: 51, height: 20)
+                label("Listening")
+            }
+        case .transcribing:
+            // Always moving, with a seconds counter, so a slow server reads as
+            // working rather than stuck.
+            HStack(spacing: 8) {
+                ProgressView()
+                    .controlSize(.small)
+                    .environment(\.colorScheme, .dark)
+                TimelineView(.periodic(from: model.since, by: 1)) { context in
+                    let seconds = Int(context.date.timeIntervalSince(model.since))
+                    label(seconds < 1 ? "Transcribing" : "Transcribing \(seconds)s")
+                        .monospacedDigit()
+                }
+            }
+            .frame(height: 20)
         case .message(let text):
-            Text(text)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(Color(red: 235/255, green: 238/255, blue: 242/255))
-                .lineLimit(1)
-                .fixedSize()
+            label(text)
                 .frame(height: 20)
         }
+    }
+
+    private func label(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 12, weight: .medium))
+            .foregroundColor(Color(red: 235/255, green: 238/255, blue: 242/255))
+            .lineLimit(1)
+            .fixedSize()
     }
 }
 
 private struct Waveform: View {
     let levels: [Float]
-    var transcribing = false
-    var heardVoice = false
     private let color = Color(red: 181/255.0, green: 209/255.0, blue: 255/255.0)
-
-    /// Height of an idle bar after a silent recording, as a fraction of the
-    /// full height.
-    private static let restHeight: CGFloat = 0.2
-    /// Size of the dots the middle bars settle into while transcribing.
-    private static let dotSize: CGFloat = 3.5
-    /// How long the bars take to settle into dots.
-    private static let settleDuration = 0.25
 
     var body: some View {
         GeometryReader { geo in
             HStack(alignment: .center, spacing: 3.75) {
-                ForEach(Array(levels.enumerated()), id: \.offset) { i, level in
-                    let bar = bar(i, level: level, height: geo.size.height)
+                ForEach(Array(levels.enumerated()), id: \.offset) { _, level in
                     Capsule()
                         .fill(color)
-                        .frame(width: bar.width, height: bar.height)
-                        .opacity(bar.opacity)
-                        .animation(
-                            transcribing ? .easeInOut(duration: Self.settleDuration) : .easeOut(duration: 0.09),
-                            value: bar.height
-                        )
-                        .animation(.easeInOut(duration: Self.settleDuration), value: bar.opacity)
+                        .frame(width: 2.5, height: max(0.10, CGFloat(level)) * geo.size.height)
+                        .animation(.easeOut(duration: 0.09), value: level)
                 }
             }
             .frame(width: geo.size.width, height: geo.size.height)
         }
-    }
-
-    /// While recording, each bar follows the level. While transcribing, the
-    /// outer bars fade where they stand and the middle ones settle into dots;
-    /// after a silent recording, every bar just rests.
-    private func bar(_ i: Int, level: Float, height: CGFloat) -> (width: CGFloat, height: CGFloat, opacity: Double) {
-        let live = max(0.10, CGFloat(level)) * height
-        guard transcribing else { return (2.5, live, 1) }
-        guard heardVoice else { return (2.5, Self.restHeight * height, 1) }
-        if i == 0 || i == levels.count - 1 {
-            return (2.5, live, 0)
-        }
-        return (Self.dotSize, Self.dotSize, 1)
     }
 }

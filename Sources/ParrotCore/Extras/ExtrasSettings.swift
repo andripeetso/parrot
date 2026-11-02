@@ -1,7 +1,7 @@
 import Foundation
 
 /// Andri's additions in `settings.json`: saved recordings, start/stop sounds,
-/// the History and file-drop keys, and an optional LAN transcription server.
+/// the History, file-drop and cancel keys, and an optional LAN transcription server.
 struct ExtrasSettings: Codable, Equatable {
     /// How many dictations stay in History (audio and transcript).
     var keepRecordings = 10
@@ -11,6 +11,8 @@ struct ExtrasSettings: Codable, Equatable {
     var historyKey: FunctionKey = .f14
     /// Opens the file drop box.
     var fileDropKey: FunctionKey = .f15
+    /// Discards the recording or transcription in progress.
+    var cancelKey: FunctionKey = .f16
     /// Tried before the on-device model: POST a WAV, get back `{"text": ...}`.
     /// Nil or empty for on-device only.
     var server: String?
@@ -23,6 +25,7 @@ struct ExtrasSettings: Codable, Equatable {
         sounds = try c.decodeIfPresent(Bool.self, forKey: .sounds) ?? true
         historyKey = try c.decodeIfPresent(String.self, forKey: .historyKey).flatMap(FunctionKey.init(rawValue:)) ?? .f14
         fileDropKey = try c.decodeIfPresent(String.self, forKey: .fileDropKey).flatMap(FunctionKey.init(rawValue:)) ?? .f15
+        cancelKey = try c.decodeIfPresent(String.self, forKey: .cancelKey).flatMap(FunctionKey.init(rawValue:)) ?? .f16
         server = try c.decodeIfPresent(String.self, forKey: .server)
     }
 

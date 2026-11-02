@@ -30,6 +30,11 @@ enum DictationError: Error {
     case cancelled
 }
 
+/// The cancel key (F16) threw away a recording or a transcription in progress.
+struct Discarded: UserFacingError {
+    var userMessage: String { "Cancelled" }
+}
+
 /// Follows the dictation loop: the overlay, the menu bar, and later stats.
 ///
 /// `DictationController` calls these on the main actor, in the order the

@@ -42,6 +42,10 @@ final class DictationController {
     private let context: @MainActor () -> TranscriptionContext
     /// Transcriptions started and not yet finished or failed.
     private var inFlight = 0
+    /// Numbers each transcription; those at or below `discardedThrough` were
+    /// cancelled by `discard` and deliver nothing when they finish.
+    private var lastStarted = 0
+    private var discardedThrough = 0
     /// What had focus when the current recording started (#38).
     private var focusAtStart: FocusSnapshot?
 
@@ -124,6 +128,8 @@ final class DictationController {
         }
 
         inFlight += 1
+        lastStarted += 1
+        let id = lastStarted
         let transcriber = self.transcriber
         let remote = self.remote
         let context = self.context()
@@ -141,6 +147,12 @@ final class DictationController {
                 let transcript = processors.reduce(raw) { $1.process($0) }
                 let processed = CFAbsoluteTimeGetCurrent()
                 if let saved { Recordings.saveTranscript(transcript.text, for: saved) }
+                // Still in History, in case the cancel was a mistake.
+                guard id > discardedThrough else {
+                    inFlight -= 1
+                    settle()
+                    return
+                }
                 let delivered = Result { try delivery.deliver(transcript.text, focusAtStart: focus) }
                 let done = CFAbsoluteTimeGetCurrent()
                 inFlight -= 1
@@ -165,6 +177,7 @@ final class DictationController {
                 Log.error("transcription failed: \(error)")
                 inFlight -= 1
                 settle()
+                guard id > discardedThrough else { return }
                 let failure = TranscriptionFailed(underlying: error, saved: saved)
                 observers.forEach { $0.dictationFailed(failure) }
             }
@@ -207,6 +220,25 @@ final class DictationController {
         state = inFlight > 0 ? .transcribing : .idle
         Log.info("○ discarded")
         observers.forEach { $0.dictationFailed(DictationError.cancelled) }
+    }
+
+    /// The cancel key: throw away the recording in progress, or, when not
+    /// recording, every transcription still running, so nothing is pasted.
+    func discard() {
+        switch state {
+        case .idle:
+            return
+        case .recording:
+            capture.stop()
+            focusAtStart = nil
+            state = inFlight > 0 ? .transcribing : .idle
+            Log.info("○ discarded recording")
+        case .transcribing:
+            discardedThrough = lastStarted
+            state = .idle
+            Log.info("○ discarded transcription")
+        }
+        observers.forEach { $0.dictationFailed(Discarded()) }
     }
 
     /// After a transcription ends, return to idle unless a newer recording

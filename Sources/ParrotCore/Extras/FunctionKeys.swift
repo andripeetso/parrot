@@ -2,7 +2,7 @@ import ApplicationServices
 import CoreGraphics
 
 /// System-wide shortcuts on plain function keys (F13 dictation, F14 History,
-/// F15 file drop). An event tap rather than `RegisterEventHotKey`: macOS's
+/// F15 file drop, F16 cancel). An event tap rather than `RegisterEventHotKey`: macOS's
 /// own shortcuts (F14/F15 are display brightness) win over Carbon hotkeys,
 /// but a session tap sees the key first. Bound keys are swallowed, so macOS
 /// doesn't also run its own action; every other key passes straight through

@@ -178,7 +178,7 @@ public enum Daemon {
                 Task { await remote.warmUp() }
             }
         }
-        // F13 (when it is the hotkey), History and file drop.
+        // F13 (when it is the hotkey), History, file drop and cancel.
         func bindFunctionKeys() {
             let extras = settings.current.extras
             var bindings: [(keycode: UInt32, action: () -> Void)] = []
@@ -189,6 +189,7 @@ public enum Daemon {
             }
             if let code = extras.historyKey.keycode { bindings.append((code, { HistoryWindow.toggle() })) }
             if let code = extras.fileDropKey.keycode { bindings.append((code, { DropBox.toggle() })) }
+            if let code = extras.cancelKey.keycode { bindings.append((code, { controller.discard() })) }
             FunctionKeys.shared.bind(bindings)
         }
         applyExtras(settings.current.extras)
