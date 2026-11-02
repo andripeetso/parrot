@@ -72,7 +72,10 @@ scripts/dev-install.sh      # build, sign, install Parrot.app, link the CLI
 - **Recent** in the menu bar: click a dictation to copy it.
 - **Transcribe file…** (menu bar or F15): drop audio or video files to transcribe them on this Mac.
 - **F13 tap to talk**: choose it as the hotkey; tap to start, tap again to stop.
-- **LAN transcription server** (off by default): set `extras.server` in `~/.config/parrot/settings.json`, or the field in Settings, to a URL that takes a WAV POST and answers `{"text": "..."}`. Parrot falls back to the on-device model when it can't be reached.
+- **F16 cancels**: throws away the recording, or the transcription in progress so nothing is pasted (it still lands in History). The pill says **Listening** while recording and **Transcribing** with a seconds counter after.
+- **LAN transcription server** (off by default): set `extras.server` in `~/.config/parrot/settings.json`, or the field in Settings, to a URL that takes a WAV POST and answers `{"text": "..."}`. Parrot falls back to the on-device model when it can't be reached. The home server is in `server/parrot-asr/`.
 - Start/stop sounds.
 
 Build and install with `scripts/build-app.sh 0.2.0-andri` and copy `build/Parrot.app` to `/Applications`. Keep a non-numeric version suffix: it switches off the updater, which would otherwise replace this build with an upstream release.
+
+**Another Mac at home:** clone this repo with `git clone -b laptop-setup https://github.com/andripeetso/parrot.git` and run `scripts/setup-mac.sh`, or ask an AI agent to set it up; [AGENTS.md](AGENTS.md) tells it how.
